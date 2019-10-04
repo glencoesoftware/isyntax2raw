@@ -23,15 +23,17 @@ def main():
     parser.add_argument("input_path", help="path to isyntax file")
     parser.add_argument("--tile_width", default=512, type=int, help="tile width in pixels")
     parser.add_argument("--tile_height", default=512, type=int, help="tile height in pixels")
+    parser.add_argument("--no_pyramid", help="toggle subresolution writing", action="store_true")
     args = parser.parse_args()
     input_file = args.input_path
     tile_width = args.tile_width
     tile_height = args.tile_height
+    no_pyramid = args.no_pyramid
 
     slide_directory, pe_in, pixel_engine = setup(input_file)
     write_label_image(slide_directory, pe_in)
     write_macro_image(slide_directory, pe_in)
-    write_pyramid(slide_directory, pe_in, pixel_engine, tile_width, tile_height)
+    write_pyramid(slide_directory, pe_in, pixel_engine, tile_width, tile_height, no_pyramid)
     pe_in.close()
 
 
@@ -56,7 +58,7 @@ def write_macro_image(slide_directory, pixel_engine):
     write_image_type(slide_directory, pixel_engine, "MACROIMAGE")
 
 # write the slide's pyramid as a set of tiles
-def write_pyramid(slide_directory, pe_in, pixel_engine, tile_width, tile_height):
+def write_pyramid(slide_directory, pe_in, pixel_engine, tile_width, tile_height, no_pyramid):
     image_container = find_image_type(pe_in, "WSI")
 
     scanned_areas = image_container.IMAGE_VALID_DATA_ENVELOPES
@@ -65,7 +67,11 @@ def write_pyramid(slide_directory, pe_in, pixel_engine, tile_width, tile_height)
 
     source_view = pe_in.SourceView()
 
-    for resolution in range(pe_in.numLevels()):
+    resolutions = range(pe_in.numLevels())
+    if no_pyramid:
+        resolutions = [0]
+
+    for resolution in resolutions:
         # create one tile directory per resolution level
         tile_directory = slide_directory + os.sep + str(resolution)
         os.mkdir(tile_directory)
