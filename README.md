@@ -21,7 +21,7 @@ Basic usage is::
 
 Output tile width and height can optionally be specified; both are 512 by default.
 A directory structure containing the pyramid tiles at all resolutions and macro/label images
-will be created.  The root directory is in the same directory as the .isyntax file.
+will be created.  Additional metadata is written to a JSON file.  The root directory is in the same directory as the .isyntax file.
 Be mindful of available disk space, as larger .isyntax files can result in >20 GB of tiles.
 
 Areas to improve
@@ -31,7 +31,7 @@ Areas to improve
     - In local testing, run time varies from 1m58s to 38m36s (1.isyntax and 9.isyntax respectively)
 * Disk space usage
     - Maybe makes more sense to write just the largest resolution, and have the Java code downsample during OME-TIFF creation?
+        * this can now be done using the "--no_pyramid" flag
     - Compress the tiles when writing?
-* Extra metadata still needs to be written to a JSON file or similar
 * Currently assumes brightfield (RGB, 8 bits per channel) without really checking the metadata.  Probably should check bit depths etc.
 * Build system and packaging...
