@@ -30,11 +30,15 @@ def main():
     parser.add_argument(
         "--no_pyramid",
         help="toggle subresolution writing", action="store_true")
+    parser.add_argument(
+        "--file_type", default="tiff",
+        help="tile file extension (jpg, png, tiff)")
     args = parser.parse_args()
     input_file = args.input_path
     tile_width = args.tile_width
     tile_height = args.tile_height
     no_pyramid = args.no_pyramid
+    file_type = "." + args.file_type
 
     slide_directory, pe_in, pixel_engine = setup(input_file)
     write_metadata(slide_directory, pe_in)
@@ -42,7 +46,7 @@ def main():
     write_macro_image(slide_directory, pe_in)
     write_pyramid(
         slide_directory, pe_in, pixel_engine,
-        tile_width, tile_height, no_pyramid)
+        tile_width, tile_height, no_pyramid, file_type)
     pe_in.close()
 
 
@@ -129,7 +133,7 @@ def write_macro_image(slide_directory, pixel_engine):
 # write the slide's pyramid as a set of tiles
 def write_pyramid(
       slide_directory, pe_in, pixel_engine,
-      tile_width, tile_height, no_pyramid):
+      tile_width, tile_height, no_pyramid, file_type):
     image_container = find_image_type(pe_in, "WSI")
 
     scanned_areas = image_container.IMAGE_VALID_DATA_ENVELOPES
@@ -185,7 +189,7 @@ def write_pyramid(
                     regions.remove(region)
 
                     directory = tile_directory + os.sep + str(x_start)
-                    file_name = directory + os.sep + str(y_start) + ".tiff"
+                    file_name = directory + os.sep + str(y_start) + file_type
                     jobs = jobs + (executor.submit(
                         write_tile, pixels, width, height, file_name),)
         futures.wait(jobs, return_when=futures.ALL_COMPLETED)
