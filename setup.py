@@ -80,6 +80,7 @@ setup(name='isyntax-to-raw',
           'click==7.0',
           'pillow==6.2.1',
           'numpy==1.17.3',
+          'psutil==5.6.3',
       ],
       tests_require=[
           'flake8',

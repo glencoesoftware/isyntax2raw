@@ -12,13 +12,13 @@ import os
 
 import numpy as np
 import pixelengine
+import psutil
 import softwarerendercontext
 import softwarerenderbackend
 
 from PIL import Image
 from concurrent import futures
 from math import ceil
-from multiprocessing import cpu_count
 
 
 class WriteTiles(object):
@@ -210,7 +210,7 @@ class WriteTiles(object):
 
             jobs = ()
             with futures.ThreadPoolExecutor(
-                max_workers=cpu_count()
+                max_workers=psutil.cpu_count(logical=False)
             ) as executor:
                 while regions:
                     regions_ready = self.pixel_engine.waitAny(regions)
