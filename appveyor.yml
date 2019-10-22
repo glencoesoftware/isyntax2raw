@@ -1,7 +1,7 @@
 image: ubuntu1804
 
 install:
-  - sudo apt-get install -y python-setuptools python-wheel twine
+  - sudo apt-get install -y python3-setuptools python3-wheel twine
 
 build: off
 
