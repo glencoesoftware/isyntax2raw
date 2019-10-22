@@ -18,17 +18,17 @@ def cli():
 
 
 @click.command()
-@click.option("input_path", help="path to isyntax file")
 @click.option(
     "--tile_width", default=512, type=int, help="tile width in pixels"
 )
-@click.optiont(
+@click.option(
     "--tile_height", default=512, type=int, help="tile height in pixels"
 )
 @click.option(
     "--no_pyramid", default=False, is_flag=True,
     help="toggle subresolution writing",
 )
+@click.argument("input_path")
 def write_tiles(tile_width, tile_height, no_pyramid, input_path):
     with WriteTiles(tile_width, tile_height, no_pyramid, input_path) as wt:
         wt.write_metadata()
