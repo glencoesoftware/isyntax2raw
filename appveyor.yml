@@ -1,5 +1,8 @@
 image: ubuntu1804
 
+install:
+  - sudo apt-get install -y python-setuptools python-wheel twine
+
 build: off
 
 build_script:
