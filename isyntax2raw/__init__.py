@@ -43,7 +43,7 @@ class WriteTiles(object):
     def __enter__(self):
         return self
 
-    def __exit__(self):
+    def __exit__(self, exception_type, exception_value, traceback):
         self.pixel_engine["in"].close()
 
     def write_metadata(self):
