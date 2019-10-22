@@ -48,40 +48,42 @@ class WriteTiles(object):
 
     def write_metadata(self):
         '''write metadata to a JSON file'''
+        pe_in = self.pixel_engine["in"]
         metadata_file = os.path.join(self.slide_directory, "METADATA.json")
         with open(metadata_file, "wb") as f:
             metadata = {
                 "Barcode":
-                    self.pixel_engine.BARCODE,
+                    pe_in.BARCODE,
                 "DICOM acquisition date":
-                    self.pixel_engine.DICOM_ACQUISITION_DATETIME,
+                    pe_in.DICOM_ACQUISITION_DATETIME,
                 "DICOM last calibration date":
-                    self.pixel_engine.DICOM_DATE_OF_LAST_CALIBRATION,
+                    pe_in.DICOM_DATE_OF_LAST_CALIBRATION,
                 "DICOM time of last calibration":
-                    self.pixel_engine.DICOM_TIME_OF_LAST_CALIBRATION,
-                "DICOM manufacturer": self.pixel_engine.DICOM_MANUFACTURER,
+                    pe_in.DICOM_TIME_OF_LAST_CALIBRATION,
+                "DICOM manufacturer":
+                pe_in.DICOM_MANUFACTURER,
                 "DICOM manufacturer model name":
-                    self.pixel_engine.DICOM_MANUFACTURERS_MODEL_NAME,
+                    pe_in.DICOM_MANUFACTURERS_MODEL_NAME,
                 "DICOM device serial number":
-                    self.pixel_engine.DICOM_DEVICE_SERIAL_NUMBER,
+                    pe_in.DICOM_DEVICE_SERIAL_NUMBER,
                 "Color space transform":
-                    self.pixel_engine.colorspaceTransform(),
+                    pe_in.colorspaceTransform(),
                 "Block size":
-                    self.pixel_engine.blockSize(),
+                    pe_in.blockSize(),
                 "Number of tiles":
-                    self.pixel_engine.numTiles(),
+                    pe_in.numTiles(),
                 "Bits stored":
-                    self.pixel_engine.bitsStored(),
+                    pe_in.bitsStored(),
                 "Derivation description":
-                    self.pixel_engine.DICOM_DERIVATION_DESCRIPTION,
+                    pe_in.DICOM_DERIVATION_DESCRIPTION,
                 "DICOM software version":
-                    self.pixel_engine.DICOM_SOFTWARE_VERSIONS,
+                    pe_in.DICOM_SOFTWARE_VERSIONS,
                 "Number of images":
-                    self.pixel_engine.numImages()
+                    pe_in.numImages()
             }
 
-            for image in range(self.pixel_engine.numImages()):
-                img = self.pixel_engine[image]
+            for image in range(pe_in.numImages()):
+                img = pe_in[image]
                 image_metadata = {
                     "Image type": img.IMAGE_TYPE,
                     "DICOM lossy image compression method":
@@ -105,7 +107,7 @@ class WriteTiles(object):
                 }
 
                 if img.IMAGE_TYPE == "WSI":
-                    view = self.pixel_engine.SourceView()
+                    view = pe_in.SourceView()
                     image_metadata["Bits allocated"] = view.bitsAllocated()
                     image_metadata["Bits stored"] = view.bitsStored()
                     image_metadata["High bit"] = view.highBit()
@@ -116,7 +118,7 @@ class WriteTiles(object):
                     image_metadata["Samples per pixel"] = \
                         view.samplesPerPixel()
                     image_metadata["Number of levels"] = \
-                        self.pixel_engine.numLevels()
+                        pe_in.numLevels()
 
                 metadata["Image #" + str(image)] = image_metadata
 
