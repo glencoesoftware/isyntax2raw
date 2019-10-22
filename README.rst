@@ -15,7 +15,7 @@ Usage
 
 Basic usage is::
 
-    isyntax2raw write_tiles /path/to/input.isyntax
+    isyntax2raw write_tiles /path/to/input.isyntax /path/to/tile/directory
 
 Output tile width and height can optionally be specified; both are 512 by default.
 A directory structure containing the pyramid tiles at all resolutions and macro/label images
