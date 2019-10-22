@@ -79,6 +79,7 @@ setup(name='isyntax-to-raw',
       setup_requires=['flake8'],
       install_requires=[
           'click==7.0',
+          'pillow==6.2.1',
       ],
       tests_require=[
           'flake8',
