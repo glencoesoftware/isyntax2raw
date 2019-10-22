@@ -33,9 +33,12 @@ def cli():
     help="tile file extension (jpg, png, tiff)"
 )
 @click.argument("input_path")
-def write_tiles(tile_width, tile_height, no_pyramid, file_type, input_path):
+@click.argument("output_path")
+def write_tiles(
+    tile_width, tile_height, no_pyramid, file_type, input_path, output_path
+):
     with WriteTiles(
-        tile_width, tile_height, no_pyramid, file_type, input_path
+        tile_width, tile_height, no_pyramid, file_type, input_path, output_path
     ) as wt:
         wt.write_metadata()
         wt.write_macro_image()

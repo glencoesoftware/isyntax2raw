@@ -24,15 +24,16 @@ from math import ceil
 class WriteTiles(object):
 
     def __init__(
-        self, tile_width, tile_height, no_pyramid, file_type, input_path
+        self, tile_width, tile_height, no_pyramid, file_type,
+        input_path, output_path
     ):
         self.tile_width = tile_width
         self.tile_height = tile_height
         self.no_pyramid = no_pyramid
         self.file_type = file_type
         self.input_path = input_path
+        self.slide_directory = output_path
 
-        self.slide_directory = input_path.replace(".isyntax", "_converted")
         os.mkdir(self.slide_directory)
 
         render_context = softwarerendercontext.SoftwareRenderContext()
