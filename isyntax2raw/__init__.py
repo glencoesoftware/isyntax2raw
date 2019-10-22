@@ -230,7 +230,7 @@ class WriteTiles(object):
                         )
                         jobs = jobs + (executor.submit(
                             write_tile, pixels, width, height, filename
-                        ))
+                        ),)
             futures.wait(jobs, return_when=futures.ALL_COMPLETED)
 
     def create_patch_list(
