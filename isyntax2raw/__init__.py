@@ -134,9 +134,10 @@ class WriteTiles(object):
 
     def find_image_type(self, image_type):
         '''look up a given image type in the pixel engine'''
-        for index in range(self.pixel_engine.numImages()):
-            if image_type == self.pixel_engine[index].IMAGE_TYPE:
-                return self.pixel_engine[index]
+        pe_in = self.pixel_engine["in"]
+        for index in range(pe_in.numImages()):
+            if image_type == pe_in[index].IMAGE_TYPE:
+                return pe_in[index]
         return None
 
     def write_image_type(self, image_type):
@@ -154,7 +155,7 @@ class WriteTiles(object):
     def write_pyramid(self):
         '''write the slide's pyramid as a set of tiles'''
         pe_in = self.pixel_engine["in"]
-        image_container = self.find_image_type(pe_in, "WSI")
+        image_container = self.find_image_type("WSI")
 
         scanned_areas = image_container.IMAGE_VALID_DATA_ENVELOPES
         if scanned_areas is None:
