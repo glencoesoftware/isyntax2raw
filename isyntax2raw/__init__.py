@@ -50,7 +50,7 @@ class WriteTiles(object):
         '''write metadata to a JSON file'''
         pe_in = self.pixel_engine["in"]
         metadata_file = os.path.join(self.slide_directory, "METADATA.json")
-        with open(metadata_file, "wb") as f:
+        with open(metadata_file, "w", encoding="utf-8") as f:
             metadata = {
                 "Barcode":
                     pe_in.BARCODE,
