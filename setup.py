@@ -9,7 +9,6 @@
 
 import os
 import sys
-import types
 
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
@@ -46,7 +45,7 @@ class PyTest(TestCommand):
 
     def run_tests(self):
         import pytest
-        if isinstance(self.pytest_args, types.StringTypes):
+        if isinstance(self.pytest_args, str):
             # pytest requires arguments as a list or tuple even if singular
             self.pytest_args = [self.pytest_args]
         errno = pytest.main(self.pytest_args)
