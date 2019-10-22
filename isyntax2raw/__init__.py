@@ -123,9 +123,20 @@ class WriteTiles(object):
                     image_metadata["Number of levels"] = \
                         pe_in.numLevels()
 
+                    for resolution in range(pe_in.numLevels()):
+                        dim_ranges = view.dimensionRanges(resolution)
+                        image_metadata["Level sizes #%s" % resolution] = {
+                            "X": self.get_size(dim_ranges[0]),
+                            "Y": self.get_size(dim_ranges[1])
+                        }
+
                 metadata["Image #" + str(image)] = image_metadata
 
             json.dump(metadata, f)
+
+    def get_size(self, dim_range):
+        '''calculate the length in pixels of a dimension'''
+        return (dim_range[2] - dim_range[0]) / dim_range[1]
 
     def write_label_image(self):
         '''write the label image (if present) as a JPEG file'''
@@ -180,10 +191,8 @@ class WriteTiles(object):
             # this level
             dim_ranges = source_view.dimensionRanges(resolution)
             print("dimension ranges = " + str(dim_ranges))
-            image_height = \
-                (dim_ranges[1][2] - dim_ranges[1][0]) / dim_ranges[1][1]
-            image_width = \
-                (dim_ranges[0][2] - dim_ranges[0][0]) / dim_ranges[0][1]
+            image_height = self.get_size(dim_ranges[1])
+            image_width = self.get_size(dim_ranges[0])
 
             y_tiles = int(ceil(image_height / self.tile_height))
             x_tiles = int(ceil(image_width / self.tile_width))
