@@ -23,10 +23,13 @@ from multiprocessing import cpu_count
 
 class WriteTiles(object):
 
-    def __init__(self, tile_width, tile_height, no_pyramid, input_path):
+    def __init__(
+        self, tile_width, tile_height, no_pyramid, file_type, input_path
+    ):
         self.tile_width = tile_width
         self.tile_height = tile_height
         self.no_pyramid = no_pyramid
+        self.file_type = file_type
         self.input_path = input_path
 
         self.slide_directory = input_path.replace(".isyntax", "_converted")
@@ -226,7 +229,7 @@ class WriteTiles(object):
 
                         directory = os.path.join(tile_directory, str(x_start))
                         filename = os.path.join(
-                            directory, "%s.tiff" % y_start
+                            directory, "%s.%s" % (y_start, self.file_type)
                         )
                         jobs = jobs + (executor.submit(
                             write_tile, pixels, width, height, filename

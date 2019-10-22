@@ -28,9 +28,15 @@ def cli():
     "--no_pyramid", default=False, is_flag=True,
     help="toggle subresolution writing",
 )
+@click.option(
+    "--file_type", default="tiff",
+    help="tile file extension (jpg, png, tiff)"
+)
 @click.argument("input_path")
-def write_tiles(tile_width, tile_height, no_pyramid, input_path):
-    with WriteTiles(tile_width, tile_height, no_pyramid, input_path) as wt:
+def write_tiles(tile_width, tile_height, no_pyramid, file_type, input_path):
+    with WriteTiles(
+        tile_width, tile_height, no_pyramid, file_type, input_path
+    ) as wt:
         wt.write_metadata()
         wt.write_macro_image()
         wt.write_pyramid()
