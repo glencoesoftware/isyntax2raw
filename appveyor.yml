@@ -1,0 +1,23 @@
+image: ubuntu1804
+
+environment:
+
+build: off
+
+build_script:
+  - python3 setup.py build
+
+before_test:
+
+test_script:
+  - python3 setup.py test
+
+after_test:
+# Force pip<=2.0.0 as 2.0.0+ is Python 3 only
+  - python3 setup.py bdist_wheel bdist_egg
+
+artifacts:
+  - path: dist/*
+
+cache:
+  - ${HOME}/.eggs -> setup.py
