@@ -1,0 +1,21 @@
+image: ubuntu1804
+
+install:
+  - sudo apt-get install -y python3-setuptools python3-wheel twine
+
+build: off
+
+build_script:
+  - python3 setup.py build
+
+#test_script:
+#  - python3 setup.py test
+
+after_test:
+  - python3 setup.py bdist_wheel bdist_egg
+
+artifacts:
+  - path: dist/*
+
+cache:
+  - ${HOME}/.eggs -> setup.py
