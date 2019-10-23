@@ -3,3 +3,4 @@ __pycache__
 build
 dist
 isyntax_to_raw.egg-info
+isyntax2raw/version.py
