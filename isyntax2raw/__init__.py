@@ -16,10 +16,11 @@ import psutil
 import softwarerendercontext
 import softwarerenderbackend
 
-from PIL import Image
 from concurrent import futures
 from math import ceil
 
+from PIL import Image
+from tifffile import imwrite
 
 class WriteTiles(object):
 
@@ -212,11 +213,24 @@ class WriteTiles(object):
                 patches, envelopes, True, [0, 0, 0])
 
             def write_tile(pixels, width, height, filename):
-                image = Image.frombuffer(
-                    'RGB', (int(width), int(height)),
-                    pixels, 'raw', 'RGB', 0, 1
-                )
-                image.save(filename)
+                root, ext = os.path.splitext(filename)
+                if ext.startswith('.tif'):
+                    # Special case for TIFF to save in planar mode using
+                    # deinterleaving and the tifffile library; planar data
+                    # is much more performant with the Bio-Formats API
+                    r = pixels[0::3]
+                    g = pixels[1::3]
+                    b = pixels[2::3]
+                    for v in (r, g, b):
+                        v.shape = (width, height)
+                    pixels = np.array([r, g, b])
+                    imwrite(filename, pixels, planarconfig='SEPARATE')
+                else:
+                    image = Image.frombuffer(
+                        'RGB', (int(width), int(height)),
+                        pixels, 'raw', 'RGB', 0, 1
+                    )
+                    image.save(filename)
 
             jobs = ()
             with futures.ThreadPoolExecutor(
