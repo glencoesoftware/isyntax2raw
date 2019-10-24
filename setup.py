@@ -81,6 +81,7 @@ setup(name='isyntax-to-raw',
           'pillow==6.2.1',
           'numpy==1.17.3',
           'psutil==5.6.3',
+          'tifffile==2019.7.26',
       ],
       tests_require=[
           'flake8',
