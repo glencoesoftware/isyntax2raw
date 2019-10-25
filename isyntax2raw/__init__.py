@@ -12,7 +12,6 @@ import os
 
 import numpy as np
 import pixelengine
-import psutil
 import softwarerendercontext
 import softwarerenderbackend
 
@@ -64,16 +63,18 @@ class MaxQueuePool(object):
     def __exit__(self, exception_type, exception_value, traceback):
         self.pool.__exit__(exception_type, exception_value, traceback)
 
+
 class WriteTiles(object):
 
     def __init__(
-        self, tile_width, tile_height, no_pyramid, file_type,
+        self, tile_width, tile_height, no_pyramid, file_type, max_workers,
         input_path, output_path
     ):
         self.tile_width = tile_width
         self.tile_height = tile_height
         self.no_pyramid = no_pyramid
         self.file_type = file_type
+        self.max_workers = max_workers
         self.input_path = input_path
         self.slide_directory = output_path
 
@@ -276,9 +277,7 @@ class WriteTiles(object):
                         source.save(destination)
 
             jobs = ()
-            with MaxQueuePool(
-                ThreadPoolExecutor, psutil.cpu_count(logical=False)
-            ) as pool:
+            with MaxQueuePool(ThreadPoolExecutor, self.max_workers) as pool:
                 while regions:
                     regions_ready = self.pixel_engine.waitAny(regions)
                     for region_index, region in enumerate(regions_ready):
