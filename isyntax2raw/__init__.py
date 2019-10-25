@@ -224,13 +224,14 @@ class WriteTiles(object):
                     for v in (r, g, b):
                         v.shape = (width, height)
                     pixels = np.array([r, g, b])
-                    imwrite(filename, pixels, planarconfig='SEPARATE')
+                    with open(filename, 'wb') as destination:
+                        imwrite(destination, pixels, planarconfig='SEPARATE')
                 else:
-                    image = Image.frombuffer(
+                    with Image.frombuffer(
                         'RGB', (int(width), int(height)),
                         pixels, 'raw', 'RGB', 0, 1
-                    )
-                    image.save(filename)
+                    ) as source, open(filename, 'wb') as destination:
+                        source.save(destination)
 
             jobs = ()
             with futures.ThreadPoolExecutor(
