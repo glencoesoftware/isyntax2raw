@@ -8,6 +8,7 @@
 # support@glencoesoftware.com.
 
 import click
+import psutil
 
 from .. import WriteTiles
 
@@ -19,26 +20,35 @@ def cli():
 
 @click.command()
 @click.option(
-    "--tile_width", default=512, type=int, help="tile width in pixels"
+    "--tile_width", default=512, type=int, show_default=True,
+    help="tile width in pixels"
 )
 @click.option(
-    "--tile_height", default=512, type=int, help="tile height in pixels"
+    "--tile_height", default=512, type=int, show_default=True,
+    help="tile height in pixels"
 )
 @click.option(
     "--no_pyramid", default=False, is_flag=True,
-    help="toggle subresolution writing",
+    help="disable subresolution writing"
 )
 @click.option(
-    "--file_type", default="tiff",
+    "--file_type", default="tiff", show_default=True,
     help="tile file extension (jpg, png, tiff)"
+)
+@click.option(
+    "--max_workers", default=psutil.cpu_count(logical=False), type=int,
+    show_default=True,
+    help="maximum number of tile workers that will run at one time",
 )
 @click.argument("input_path")
 @click.argument("output_path")
 def write_tiles(
-    tile_width, tile_height, no_pyramid, file_type, input_path, output_path
+    tile_width, tile_height, no_pyramid, file_type, max_workers, input_path,
+    output_path
 ):
     with WriteTiles(
-        tile_width, tile_height, no_pyramid, file_type, input_path, output_path
+        tile_width, tile_height, no_pyramid, file_type, max_workers,
+        input_path, output_path
     ) as wt:
         wt.write_metadata()
         wt.write_label_image()
