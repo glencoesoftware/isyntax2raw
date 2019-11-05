@@ -243,7 +243,7 @@ class WriteTiles(object):
         g = pixels[1::3]
         b = pixels[2::3]
         for v in (r, g, b):
-            v.shape = (tile_width, tile_height)
+            v.shape = (tile_height, tile_width)
         return np.array([r, g, b])
 
     def write_pyramid(self):
