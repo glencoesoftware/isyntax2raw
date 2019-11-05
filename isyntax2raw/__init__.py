@@ -68,12 +68,12 @@ class MaxQueuePool(object):
 class WriteTiles(object):
 
     def __init__(
-        self, tile_width, tile_height, no_pyramid, file_type, max_workers,
+        self, tile_width, tile_height, resolutions, file_type, max_workers,
         input_path, output_path
     ):
         self.tile_width = tile_width
         self.tile_height = tile_height
-        self.no_pyramid = no_pyramid
+        self.resolutions = resolutions
         self.file_type = file_type
         self.max_workers = max_workers
         self.input_path = input_path
@@ -255,9 +255,10 @@ class WriteTiles(object):
         if scanned_areas is None:
             raise RuntimeError("No valid data envelopes")
 
-        resolutions = range(pe_in.numLevels())
-        if self.no_pyramid:
-            resolutions = [0]
+        if self.resolutions is None:
+            resolutions = range(pe_in.numLevels())
+        else:
+            resolutions = range(self.resolutions)
 
         def write_tile(
             pixels, resolution, x_start, y_start, tile_width, tile_height,
