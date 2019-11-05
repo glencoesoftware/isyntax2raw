@@ -377,12 +377,10 @@ class WriteTiles(object):
         tile_size[1] = tile_size[1] * scale
         for y in range(tiles[1]):
             y_start = origin[1] + (y * tile_size[1])
-            y_end = (y_start + tile_size[1]) - scale
-            y_end = min(y_end, image_y_end)
+            y_end = min((y_start + tile_size[1]) - scale, image_y_end)
             for x in range(tiles[0]):
                 x_start = origin[0] + (x * tile_size[0])
-                x_end = (x_start + tile_size[0]) - scale
-                x_end = min(x_end, image_x_end)
+                x_end = min((x_start + tile_size[0]) - scale, image_x_end)
                 patch = [x_start, x_end, y_start, y_end, level]
                 patches.append(patch)
                 # Associating spatial information (tile X and Y offset) in
