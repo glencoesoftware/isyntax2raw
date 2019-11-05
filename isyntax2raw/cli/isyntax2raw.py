@@ -33,7 +33,7 @@ def cli():
 )
 @click.option(
     "--file_type", default="tiff", show_default=True,
-    help="tile file extension (jpg, png, tiff, zarr)"
+    help="tile file extension (jpg, png, tiff, n5, zarr)"
 )
 @click.option(
     "--max_workers", default=psutil.cpu_count(logical=False), type=int,

@@ -216,11 +216,14 @@ class WriteTiles(object):
         tile_directory = os.path.join(
             self.slide_directory, str(resolution)
         )
-        if self.file_type == "zarr":
+        if self.file_type in ("n5", "zarr"):
             tile_directory = os.path.join(
-                self.slide_directory, "pyramid.zarr"
+                self.slide_directory, "pyramid.%s" % self.file_type
             )
-            group = zarr.group(tile_directory)
+            store = zarr.DirectoryStore(tile_directory)
+            if self.file_type == "n5":
+                store = zarr.N5Store(tile_directory)
+            group = zarr.group(store=store)
             dataset = group.create_dataset(
                 str(resolution), shape=(3, height, width),
                 chunks=(None, self.tile_height, self.tile_width), dtype='B'
@@ -234,7 +237,7 @@ class WriteTiles(object):
             os.path.join(tile_directory, str(x_start)),
             "%s.%s" % (y_start, self.file_type)
         )
-        if self.file_type == "zarr":
+        if self.file_type in ("n5", "zarr"):
             filename = tile_directory
         return filename
 
@@ -267,12 +270,11 @@ class WriteTiles(object):
             x_end = x_start + tile_width
             y_end = y_start + tile_height
             try:
-                if self.file_type == 'zarr':
-                    # Special case for Zarr which has a single n-dimensional
+                if self.file_type in ("n5", "zarr"):
+                    # Special case for N5/Zarr which has a single n-dimensional
                     # array representation on disk
                     pixels = self.make_planar(pixels, tile_width, tile_height)
-                    group = zarr.group(filename)
-                    z = group[str(resolution)]
+                    z = zarr.open(filename)[str(resolution)]
                     z[:, y_start:y_end, x_start:x_end] = pixels
                 elif self.file_type == 'tiff':
                     # Special case for TIFF to save in planar mode using
@@ -359,7 +361,7 @@ class WriteTiles(object):
             wait(jobs, return_when=ALL_COMPLETED)
 
     def create_x_directory(self, tile_directory, x_start):
-        if self.file_type == "zarr":
+        if self.file_type in ("n5", "zarr"):
             return
 
         x_directory = os.path.join(tile_directory, str(x_start))
