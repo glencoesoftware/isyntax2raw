@@ -222,8 +222,8 @@ class WriteTiles(object):
             )
             group = zarr.group(tile_directory)
             dataset = group.create_dataset(
-                str(resolution), shape=(3, width, height),
-                chunks=(None, self.tile_width, self.tile_height), dtype='B'
+                str(resolution), shape=(3, height, width),
+                chunks=(None, self.tile_height, self.tile_width), dtype='B'
             )
         else:
             os.mkdir(tile_directory)
@@ -273,7 +273,7 @@ class WriteTiles(object):
                     pixels = self.make_planar(pixels, tile_width, tile_height)
                     group = zarr.group(filename)
                     z = group[str(resolution)]
-                    z[:, x_start:x_end, y_start:y_end] = pixels
+                    z[:, y_start:y_end, x_start:x_end] = pixels
                 elif self.file_type == 'tiff':
                     # Special case for TIFF to save in planar mode using
                     # deinterleaving and the tifffile library; planar data
