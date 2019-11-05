@@ -8,15 +8,16 @@
 # missing please request a copy by contacting info@glencoesoftware.com
 
 import json
+import math
 import os
 
 import numpy as np
 import pixelengine
 import softwarerendercontext
 import softwarerenderbackend
+import zarr
 
 from concurrent.futures import ALL_COMPLETED, ThreadPoolExecutor, wait
-from math import ceil
 from threading import BoundedSemaphore
 
 from PIL import Image
@@ -211,6 +212,40 @@ class WriteTiles(object):
                 image.write(pixels)
             print("wrote %s image" % image_type)
 
+    def create_tile_directory(self, resolution, width, height):
+        tile_directory = os.path.join(
+            self.slide_directory, str(resolution)
+        )
+        if self.file_type == "zarr":
+            tile_directory = os.path.join(
+                self.slide_directory, "pyramid.zarr"
+            )
+            group = zarr.group(tile_directory)
+            dataset = group.create_dataset(
+                str(resolution), shape=(3, width, height),
+                chunks=(None, self.tile_width, self.tile_height), dtype='B'
+            )
+        else:
+            os.mkdir(tile_directory)
+        return tile_directory
+
+    def get_tile_filename(self, tile_directory, x_start, y_start):
+        filename = os.path.join(
+            os.path.join(tile_directory, str(x_start)),
+            "%s.%s" % (y_start, self.file_type)
+        )
+        if self.file_type == "zarr":
+            filename = tile_directory
+        return filename
+
+    def make_planar(self, pixels, tile_width, tile_height):
+        r = pixels[0::3]
+        g = pixels[1::3]
+        b = pixels[2::3]
+        for v in (r, g, b):
+            v.shape = (tile_width, tile_height)
+        return np.array([r, g, b])
+
     def write_pyramid(self):
         '''write the slide's pyramid as a set of tiles'''
         pe_in = self.pixel_engine["in"]
@@ -224,57 +259,72 @@ class WriteTiles(object):
         if self.no_pyramid:
             resolutions = [0]
 
+        def write_tile(
+            pixels, resolution, x_start, y_start, tile_width, tile_height,
+            filename
+        ):
+            x_end = x_start + tile_width
+            y_end = y_start + tile_height
+            try:
+                if self.file_type == 'zarr':
+                    # Special case for Zarr which has a single n-dimensional
+                    # array representation on disk
+                    pixels = self.make_planar(pixels, tile_width, tile_height)
+                    group = zarr.group(filename)
+                    z = group[str(resolution)]
+                    z[:, x_start:x_end, y_start:y_end] = pixels
+                elif self.file_type == 'tiff':
+                    # Special case for TIFF to save in planar mode using
+                    # deinterleaving and the tifffile library; planar data
+                    # is much more performant with the Bio-Formats API
+                    pixels = self.make_planar(pixels, tile_width, tile_height)
+                    with open(filename, 'wb') as destination:
+                        imwrite(destination, pixels, planarconfig='SEPARATE')
+                else:
+                    with Image.frombuffer(
+                        'RGB', (int(tile_width), int(tile_height)),
+                        pixels, 'raw', 'RGB', 0, 1
+                    ) as source, open(filename, 'wb') as destination:
+                        source.save(destination)
+            except Exception:
+                import traceback
+                traceback.print_exc()
+                print(
+                    "Failed to write tile [:, %d:%d, %d:%d] to %s" % (
+                        x_start, x_end, y_start, y_end, filename
+                    )
+                )
+
         source_view = pe_in.SourceView()
         for resolution in resolutions:
-            # create one tile directory per resolution level
-            tile_directory = os.path.join(
-                self.slide_directory, str(resolution)
-            )
-            os.mkdir(tile_directory)
-
             # assemble data envelopes (== scanned areas) to extract for
             # this level
             dim_ranges = source_view.dimensionRanges(resolution)
             print("dimension ranges = " + str(dim_ranges))
-            image_height = self.get_size(dim_ranges[1])
-            image_width = self.get_size(dim_ranges[0])
+            resolution_x_end = math.ceil(self.get_size(dim_ranges[0]))
+            resolution_y_end = math.ceil(self.get_size(dim_ranges[1]))
 
-            y_tiles = int(ceil(image_height / self.tile_height))
-            x_tiles = int(ceil(image_width / self.tile_width))
+            x_tiles = math.ceil(resolution_x_end / self.tile_width)
+            y_tiles = math.ceil(resolution_y_end / self.tile_height)
 
             print("# of X tiles = %s" % x_tiles)
             print("# of Y tiles = %s" % y_tiles)
 
-            patches = self.create_patch_list(
-                [x_tiles, y_tiles], [self.tile_width, self.tile_height],
-                [dim_ranges[0][0], dim_ranges[1][0]], resolution,
-                tile_directory
+            # create one tile directory per resolution level if required
+            tile_directory = self.create_tile_directory(
+                resolution, resolution_x_end + 1, resolution_y_end + 1
+            )
+
+            patches, patch_identifier = self.create_patch_list(
+                dim_ranges[0][2], dim_ranges[1][2], [x_tiles, y_tiles],
+                [self.tile_width, self.tile_height],
+                [dim_ranges[0][0], dim_ranges[1][0]],
+                resolution, tile_directory
             )
 
             envelopes = source_view.dataEnvelopes(resolution)
             regions = source_view.requestRegions(
                 patches, envelopes, True, [0, 0, 0])
-
-            def write_tile(pixels, width, height, filename):
-                root, ext = os.path.splitext(filename)
-                if ext.startswith('.tif'):
-                    # Special case for TIFF to save in planar mode using
-                    # deinterleaving and the tifffile library; planar data
-                    # is much more performant with the Bio-Formats API
-                    r = pixels[0::3]
-                    g = pixels[1::3]
-                    b = pixels[2::3]
-                    for v in (r, g, b):
-                        v.shape = (width, height)
-                    pixels = np.array([r, g, b])
-                    with open(filename, 'wb') as destination:
-                        imwrite(destination, pixels, planarconfig='SEPARATE')
-                else:
-                    with Image.frombuffer(
-                        'RGB', (int(width), int(height)),
-                        pixels, 'raw', 'RGB', 0, 1
-                    ) as source, open(filename, 'wb') as destination:
-                        source.save(destination)
 
             jobs = ()
             with MaxQueuePool(ThreadPoolExecutor, self.max_workers) as pool:
@@ -287,38 +337,56 @@ class WriteTiles(object):
                         width = int(1 + (x_end - x_start) / dim_ranges[0][1])
                         height = int(1 + (y_end - y_start) / dim_ranges[1][1])
                         pixel_buffer_size = width * height * 3
-                        pixels = np.empty(
-                            int(pixel_buffer_size), dtype=np.uint8
-                        )
+                        pixels = np.empty(int(pixel_buffer_size), dtype='B')
+                        patch_id = patch_identifier[regions.index(region)]
+                        x_start, y_start = patch_id
+                        x_start *= self.tile_width
+                        y_start *= self.tile_height
+                        patch_identifier.remove(patch_id)
+
                         region.get(pixels)
                         regions.remove(region)
 
-                        directory = os.path.join(tile_directory, str(x_start))
-                        filename = os.path.join(
-                            directory, "%s.%s" % (y_start, self.file_type)
+                        filename = self.get_tile_filename(
+                            tile_directory, x_start, y_start
                         )
                         jobs = jobs + (pool.submit(
-                            write_tile, pixels, width, height, filename
+                            write_tile, pixels, resolution,
+                            x_start, y_start, width, height,
+                            filename
                         ),)
             wait(jobs, return_when=ALL_COMPLETED)
 
+    def create_x_directory(self, tile_directory, x_start):
+        if self.file_type == "zarr":
+            return
+
+        x_directory = os.path.join(tile_directory, str(x_start))
+        if not os.path.exists(x_directory):
+            os.mkdir(x_directory)
+
     def create_patch_list(
-        self, tiles, tile_size, origin, level, tile_directory
+        self, image_x_end, image_y_end, tiles, tile_size, origin, level,
+        tile_directory
     ):
         patches = []
+        patch_identifier = []
         scale = 2 ** level
         tile_size[0] = tile_size[0] * scale
         tile_size[1] = tile_size[1] * scale
         for y in range(tiles[1]):
             y_start = origin[1] + (y * tile_size[1])
             y_end = (y_start + tile_size[1]) - scale
+            y_end = min(y_end, image_y_end)
             for x in range(tiles[0]):
                 x_start = origin[0] + (x * tile_size[0])
                 x_end = (x_start + tile_size[0]) - scale
+                x_end = min(x_end, image_x_end)
                 patch = [x_start, x_end, y_start, y_end, level]
                 patches.append(patch)
+                # Associating spatial information (tile X and Y offset) in
+                # order to identify the patches returned asynchronously
+                patch_identifier.append((x, y))
 
-                x_directory = os.path.join(tile_directory, str(x_start))
-                if not os.path.exists(x_directory):
-                    os.mkdir(x_directory)
-        return patches
+                self.create_x_directory(tile_directory, x * self.tile_width)
+        return patches, patch_identifier
