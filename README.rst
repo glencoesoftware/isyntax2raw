@@ -17,18 +17,22 @@ Basic usage is::
 
     isyntax2raw write_tiles /path/to/input.isyntax /path/to/tile/directory
 
-Output tile width and height can optionally be specified; both are 512 by default.
-A directory structure containing the pyramid tiles at all resolutions and macro/label images
-will be created.  Additional metadata is written to a JSON file.  The root directory is in the same directory as the .isyntax file.
-Be mindful of available disk space, as larger .isyntax files can result in >20 GB of tiles.
+Please see `isyntax2raw write_tiles --help` for detailed information.
+
+Output tile width and height can optionally be specified; default values are
+detailed in `--help`.
+
+A directory structure containing the pyramid tiles at all resolutions and
+macro/label images will be created.  Additional metadata is written to a
+JSON file.  The root directory is in the same directory as the .isyntax file.
+Be mindful of available disk space, as larger .isyntax files can result
+in >20 GB of tiles.
+
+Use of a n5 or zarr `--file_type` will result in losslessly compressed output.
+Both of these formats are supported by the downstream `raw-to-ome-tiff`.
 
 Areas to improve
 ================
 
-* Conversion time
-    - In local testing, run time varies from 1m58s to 38m36s (1.isyntax and 9.isyntax respectively)
-* Disk space usage
-    - Maybe makes more sense to write just the largest resolution, and have the Java code downsample during OME-TIFF creation?
-        * this can now be done using the "--no_pyramid" flag
-    - Compress the tiles when writing?
-* Currently assumes brightfield (RGB, 8 bits per channel) without really checking the metadata.  Probably should check bit depths etc.
+* Currently assumes brightfield (RGB, 8 bits per channel) without really
+  checking the metadata.  Probably should check bit depths etc.
