@@ -1,4 +1,4 @@
-[![AppVeyor status](https://ci.appveyor.com/api/projects/status/github/isyntax-to-raw)](https://ci.appveyor.com/project/gs-jenkins/isyntax-to-raw)
+[![AppVeyor status](https://ci.appveyor.com/api/projects/status/github/isyntax2raw)](https://ci.appveyor.com/project/gs-jenkins/isyntax2raw)
 
 iSyntax Converter
 =================
