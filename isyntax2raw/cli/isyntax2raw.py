@@ -32,7 +32,7 @@ def cli():
     help="number of pyramid resolutions to generate [default: all]"
 )
 @click.option(
-    "--file_type", default="tiff", show_default=True,
+    "--file_type", default="n5", show_default=True,
     help="tile file extension (jpg, png, tiff, n5, zarr)"
 )
 @click.option(
