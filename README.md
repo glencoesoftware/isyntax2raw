@@ -20,13 +20,14 @@ Output tile width and height can optionally be specified; default values are
 detailed in `--help`.
 
 A directory structure containing the pyramid tiles at all resolutions and
-macro/label images will be created.  Additional metadata is written to a
-JSON file.  The root directory is in the same directory as the .isyntax file.
-Be mindful of available disk space, as larger .isyntax files can result
-in >20 GB of tiles.
+macro/label images will be created.  The default format is N5.  Additional
+metadata is written to a JSON file.  The root directory is in the same
+directory as the .isyntax file.  Be mindful of available disk space, as
+larger .isyntax files can result in >20 GB of tiles.
 
 Use of a n5 or zarr `--file_type` will result in losslessly compressed output.
-Both of these formats are supported by the downstream `raw-to-ome-tiff`.
+These are the only formats that are currently supported by the downstream
+`raw2ometiff`.
 
 ## Areas to improve
 
