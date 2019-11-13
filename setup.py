@@ -60,7 +60,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
-setup(name='isyntax-to-raw',
+setup(name='isyntax2raw',
       version=version.getVersion(),
       description='iSyntax to raw format converter',
       long_description=read('README.rst'),
