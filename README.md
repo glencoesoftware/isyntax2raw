@@ -29,6 +29,11 @@ Use of a n5 or zarr `--file_type` will result in losslessly compressed output.
 These are the only formats that are currently supported by the downstream
 `raw2ometiff`.
 
+## License
+
+The iSyntax converter is distributed under the terms of the BSD license.
+Please see `LICENSE.txt` for further details.
+
 ## Areas to improve
 
 * Currently assumes brightfield (RGB, 8 bits per channel) without really
