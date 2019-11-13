@@ -63,7 +63,8 @@ def read(fname):
 setup(name='isyntax2raw',
       version=version.getVersion(),
       description='iSyntax to raw format converter',
-      long_description=read('README.rst'),
+      long_description=read('README.md'),
+      long_description_content_type='text/markdown'
       classifiers=[],  # Get strings from
                        # http://pypi.python.org/pypi?%3Aaction=list_classifiers
       keywords='',
