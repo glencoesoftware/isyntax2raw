@@ -21,8 +21,7 @@ detailed in `--help`.
 
 A directory structure containing the pyramid tiles at all resolutions and
 macro/label images will be created.  The default format is N5.  Additional
-metadata is written to a JSON file.  The root directory is in the same
-directory as the .isyntax file.  Be mindful of available disk space, as
+metadata is written to a JSON file.  Be mindful of available disk space, as
 larger .isyntax files can result in >20 GB of tiles.
 
 Use of a n5 or zarr `--file_type` will result in losslessly compressed output.
