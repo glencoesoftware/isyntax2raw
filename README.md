@@ -8,6 +8,9 @@ Python tool that uses Philips' SDK to write slides in an intermediary raw format
 
 * Philips iSyntax SDK (https://openpathology.philips.com)
 
+The iSyntax SDK must be downloaded separately from Philips and the relevant
+license agreement agreed to before any conversion can take place.
+
 ## Usage
 
 Basic usage is:
