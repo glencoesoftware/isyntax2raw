@@ -211,20 +211,31 @@ class WriteTiles(object):
         timestamp = str(pe_in.DICOM_ACQUISITION_DATETIME)
         ome_timestamp = datetime.strptime(timestamp, "%Y%m%d%H%M%S.%f")
 
-        xml_values = dict(
-            slideName=pe_in.BARCODE,
-            date=ome_timestamp.isoformat(),
-            description=pe_in.DICOM_DERIVATION_DESCRIPTION,
-            sizeX=int(size_x),
-            sizeY=int(size_y),
-            pixelSizeX=pixel_size_x,
-            pixelSizeY=pixel_size_y,
-            labelSizeX=int(label_x),
-            labelSizeY=int(label_y),
-            macroSizeX=int(macro_x),
-            macroSizeY=int(macro_y)
-        )
-
+        xml_values = {
+            'image': {
+                'name': pe_in.BARCODE,
+                'acquisitionDate': ome_timestamp.isoformat(),
+                'description': pe_in.DICOM_DERIVATION_DESCRIPTION,
+                'pixels': {
+                    'sizeX': int(size_x),
+                    'sizeY': int(size_y),
+                    'physicalSizeX': pixel_size_x,
+                    'physicalSizeY': pixel_size_y
+                }
+            },
+            'label': {
+                'pixels': {
+                    'sizeX': int(label_x),
+                    'sizeY': int(label_y)
+                }
+            },
+            'macro': {
+                'pixels': {
+                    'sizeX': int(macro_x),
+                    'sizeY': int(macro_y)
+                }
+            }
+        }
         loader = PackageLoader()
         template = loader.import_("isyntax2raw.resources.ome_template")
         xml = template(xml_values).render()
