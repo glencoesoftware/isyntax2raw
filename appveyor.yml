@@ -9,8 +9,8 @@ build: off
 build_script:
   - python3 setup.py build
 
-#test_script:
-#  - python3 setup.py test
+test_script:
+  - python3 setup.py flake8
 
 after_test:
   - python3 setup.py bdist_wheel bdist_egg

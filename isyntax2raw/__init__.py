@@ -17,10 +17,12 @@ import softwarerendercontext
 import softwarerenderbackend
 import zarr
 
+from datetime import datetime
 from concurrent.futures import ALL_COMPLETED, ThreadPoolExecutor, wait
 from threading import BoundedSemaphore
 
 from PIL import Image
+from kajiki import PackageLoader
 from tifffile import imwrite
 
 
@@ -99,6 +101,7 @@ class WriteTiles(object):
         '''write metadata to a JSON file'''
         pe_in = self.pixel_engine["in"]
         metadata_file = os.path.join(self.slide_directory, "METADATA.json")
+
         with open(metadata_file, "w", encoding="utf-8") as f:
             metadata = {
                 "Barcode":
@@ -131,6 +134,15 @@ class WriteTiles(object):
                     pe_in.numImages()
             }
 
+            size_x = 0
+            size_y = 0
+            label_x = 0
+            label_y = 0
+            macro_x = 0
+            macro_y = 0
+            pixel_size_x = 1.0
+            pixel_size_y = 1.0
+
             for image in range(pe_in.numImages()):
                 img = pe_in[image]
                 image_metadata = {
@@ -156,6 +168,9 @@ class WriteTiles(object):
                 }
 
                 if img.IMAGE_TYPE == "WSI":
+                    pixel_size_x = img.IMAGE_SCALE_FACTOR[0]
+                    pixel_size_y = img.IMAGE_SCALE_FACTOR[1]
+
                     view = pe_in.SourceView()
                     image_metadata["Bits allocated"] = view.bitsAllocated()
                     image_metadata["Bits stored"] = view.bitsStored()
@@ -171,14 +186,62 @@ class WriteTiles(object):
 
                     for resolution in range(pe_in.numLevels()):
                         dim_ranges = view.dimensionRanges(resolution)
+                        level_size_x = self.get_size(dim_ranges[0])
+                        level_size_y = self.get_size(dim_ranges[1])
                         image_metadata["Level sizes #%s" % resolution] = {
-                            "X": self.get_size(dim_ranges[0]),
-                            "Y": self.get_size(dim_ranges[1])
+                            "X": level_size_x,
+                            "Y": level_size_y
                         }
+                        if resolution == 0:
+                            size_x = level_size_x
+                            size_y = level_size_y
+
+                elif img.IMAGE_TYPE == "LABELIMAGE":
+                    label_x = self.get_size(img.IMAGE_DIMENSION_RANGES[0])
+                    label_y = self.get_size(img.IMAGE_DIMENSION_RANGES[1])
+
+                elif img.IMAGE_TYPE == "MACROIMAGE":
+                    macro_x = self.get_size(img.IMAGE_DIMENSION_RANGES[0])
+                    macro_y = self.get_size(img.IMAGE_DIMENSION_RANGES[1])
 
                 metadata["Image #" + str(image)] = image_metadata
 
             json.dump(metadata, f)
+
+        timestamp = str(pe_in.DICOM_ACQUISITION_DATETIME)
+        ome_timestamp = datetime.strptime(timestamp, "%Y%m%d%H%M%S.%f")
+
+        xml_values = {
+            'image': {
+                'name': pe_in.BARCODE,
+                'acquisitionDate': ome_timestamp.isoformat(),
+                'description': pe_in.DICOM_DERIVATION_DESCRIPTION,
+                'pixels': {
+                    'sizeX': int(size_x),
+                    'sizeY': int(size_y),
+                    'physicalSizeX': pixel_size_x,
+                    'physicalSizeY': pixel_size_y
+                }
+            },
+            'label': {
+                'pixels': {
+                    'sizeX': int(label_x),
+                    'sizeY': int(label_y)
+                }
+            },
+            'macro': {
+                'pixels': {
+                    'sizeX': int(macro_x),
+                    'sizeY': int(macro_y)
+                }
+            }
+        }
+        loader = PackageLoader()
+        template = loader.import_("isyntax2raw.resources.ome_template")
+        xml = template(xml_values).render()
+        ome_xml_file = os.path.join(self.slide_directory, "METADATA.ome.xml")
+        with open(ome_xml_file, "w") as omexml:
+            omexml.write(xml)
 
     def get_size(self, dim_range):
         '''calculate the length in pixels of a dimension'''
@@ -224,7 +287,7 @@ class WriteTiles(object):
             if self.file_type == "n5":
                 store = zarr.N5Store(tile_directory)
             group = zarr.group(store=store)
-            dataset = group.create_dataset(
+            group.create_dataset(
                 str(resolution), shape=(3, height, width),
                 chunks=(None, self.tile_height, self.tile_width), dtype='B'
             )
