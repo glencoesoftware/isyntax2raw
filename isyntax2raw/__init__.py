@@ -12,7 +12,7 @@ import json
 import math
 import os
 
-from kajiki import PackageLoader, Template
+from kajiki import PackageLoader
 import numpy as np
 import pixelengine
 import softwarerendercontext
@@ -287,7 +287,7 @@ class WriteTiles(object):
             if self.file_type == "n5":
                 store = zarr.N5Store(tile_directory)
             group = zarr.group(store=store)
-            dataset = group.create_dataset(
+            group.create_dataset(
                 str(resolution), shape=(3, height, width),
                 chunks=(None, self.tile_height, self.tile_width), dtype='B'
             )
