@@ -466,10 +466,14 @@ class WriteTiles(object):
         tile_size_y = tile_size[1] * scale_y
         for y in range(tiles_y):
             y_start = origin_y + (y * tile_size_y)
-            y_end = min((y_start + tile_size_y) - scale_y, image_y_end)
+            # Subtracting "scale_y" here makes no sense but it works and
+            # reflects the isyntax SDK examples
+            y_end = min((y_start + tile_size_y) - scale_y, image_y_end - scale_y)
             for x in range(tiles_x):
                 x_start = origin_x + (x * tile_size_x)
-                x_end = min((x_start + tile_size_x) - scale_x, image_x_end)
+                # Subtracting "scale_x" here makes no sense but it works and
+                # reflects the isyntax SDK examples
+                x_end = min((x_start + tile_size_x) - scale_x, image_x_end - scale_x)
                 patch = [x_start, x_end, y_start, y_end, level]
                 patches.append(patch)
                 # Associating spatial information (tile X and Y offset) in
