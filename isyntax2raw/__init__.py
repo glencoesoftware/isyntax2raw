@@ -385,7 +385,7 @@ class WriteTiles(object):
 
             # create one tile directory per resolution level if required
             tile_directory = self.create_tile_directory(
-                resolution, resolution_x_size + 1, resolution_y_size + 1
+                resolution, resolution_x_size, resolution_y_size
             )
 
             patches, patch_identifier = self.create_patch_list(
