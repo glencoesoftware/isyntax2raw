@@ -437,7 +437,6 @@ class WriteTiles(object):
         if not os.path.exists(x_directory):
             os.mkdir(x_directory)
 
-
     def create_patch_list(
         self, dim_ranges, tiles, tile_size, tile_directory
     ):
@@ -457,7 +456,8 @@ class WriteTiles(object):
         level = math.log2(scale_x)
         if scale_x != scale_y or not level.is_integer():
             raise ValueError(
-                "scale_x=%d scale_y=%d do not match isyntax format assumptions!" % (
+                "scale_x=%d scale_y=%d do not match isyntax format " +
+                "assumptions!" % (
                     scale_x, scale_y
                 )
             )
@@ -468,12 +468,16 @@ class WriteTiles(object):
             y_start = origin_y + (y * tile_size_y)
             # Subtracting "scale_y" here makes no sense but it works and
             # reflects the isyntax SDK examples
-            y_end = min((y_start + tile_size_y) - scale_y, image_y_end - scale_y)
+            y_end = min(
+                (y_start + tile_size_y) - scale_y, image_y_end - scale_y
+            )
             for x in range(tiles_x):
                 x_start = origin_x + (x * tile_size_x)
                 # Subtracting "scale_x" here makes no sense but it works and
                 # reflects the isyntax SDK examples
-                x_end = min((x_start + tile_size_x) - scale_x, image_x_end - scale_x)
+                x_end = min(
+                    (x_start + tile_size_x) - scale_x, image_x_end - scale_x
+                )
                 patch = [x_start, x_end, y_start, y_end, level]
                 patches.append(patch)
                 # Associating spatial information (tile X and Y offset) in
