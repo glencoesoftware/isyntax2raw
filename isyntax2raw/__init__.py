@@ -245,7 +245,12 @@ class WriteTiles(object):
 
     def get_size(self, dim_range):
         '''calculate the length in pixels of a dimension'''
-        return (dim_range[2] - dim_range[0]) / dim_range[1]
+        v = (dim_range[2] - dim_range[0]) / dim_range[1]
+        if not v.is_integer():
+            # isyntax infrastructure should ensure this always divides
+            # evenly
+            raise ValueError('(%d - %d) / %d results in remainder!')
+        return v
 
     def write_label_image(self):
         '''write the label image (if present) as a JPEG file'''
