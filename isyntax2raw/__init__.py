@@ -480,7 +480,8 @@ class WriteTiles(object):
                 # Subtracting "scale_x" here makes no sense but it works and
                 # reflects the isyntax SDK examples
                 x_end = min(
-                    (x_start + tile_size_x) - scale_x, resolution_x_end - scale_x
+                    (x_start + tile_size_x) - scale_x,
+                    resolution_x_end - scale_x
                 )
                 patch = [x_start, x_end, y_start, y_end, level]
                 patches.append(patch)
