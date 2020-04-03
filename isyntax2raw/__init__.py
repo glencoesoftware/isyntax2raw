@@ -245,7 +245,16 @@ class WriteTiles(object):
 
     def get_size(self, dim_range):
         '''calculate the length in pixels of a dimension'''
-        return (dim_range[2] - dim_range[0]) / dim_range[1]
+        v = (dim_range[2] - dim_range[0]) / dim_range[1]
+        if not v.is_integer():
+            # isyntax infrastructure should ensure this always divides
+            # evenly
+            raise ValueError(
+                '(%d - %d) / %d results in remainder!' % (
+                    dim_range[2], dim_range[0], dim_range[1]
+                )
+            )
+        return v
 
     def write_label_image(self):
         '''write the label image (if present) as a JPEG file'''
@@ -366,26 +375,27 @@ class WriteTiles(object):
             # assemble data envelopes (== scanned areas) to extract for
             # this level
             dim_ranges = source_view.dimensionRanges(resolution)
-            print("dimension ranges = " + str(dim_ranges))
-            resolution_x_end = math.ceil(self.get_size(dim_ranges[0]))
-            resolution_y_end = math.ceil(self.get_size(dim_ranges[1]))
+            print("dimension ranges = %s" % dim_ranges)
+            resolution_x_size = self.get_size(dim_ranges[0])
+            resolution_y_size = self.get_size(dim_ranges[1])
+            scale_x = dim_ranges[0][1]
+            scale_y = dim_ranges[1][1]
 
-            x_tiles = math.ceil(resolution_x_end / self.tile_width)
-            y_tiles = math.ceil(resolution_y_end / self.tile_height)
+            x_tiles = math.ceil(resolution_x_size / self.tile_width)
+            y_tiles = math.ceil(resolution_y_size / self.tile_height)
 
             print("# of X tiles = %s" % x_tiles)
             print("# of Y tiles = %s" % y_tiles)
 
             # create one tile directory per resolution level if required
             tile_directory = self.create_tile_directory(
-                resolution, resolution_x_end + 1, resolution_y_end + 1
+                resolution, resolution_x_size, resolution_y_size
             )
 
             patches, patch_identifier = self.create_patch_list(
-                dim_ranges[0][2], dim_ranges[1][2], [x_tiles, y_tiles],
+                dim_ranges, [x_tiles, y_tiles],
                 [self.tile_width, self.tile_height],
-                [dim_ranges[0][0], dim_ranges[1][0]],
-                resolution, tile_directory
+                tile_directory
             )
 
             envelopes = source_view.dataEnvelopes(resolution)
@@ -400,8 +410,8 @@ class WriteTiles(object):
                         view_range = region.range
                         print("processing tile %s" % view_range)
                         x_start, x_end, y_start, y_end, level = view_range
-                        width = int(1 + (x_end - x_start) / dim_ranges[0][1])
-                        height = int(1 + (y_end - y_start) / dim_ranges[1][1])
+                        width = int(1 + (x_end - x_start) / scale_x)
+                        height = int(1 + (y_end - y_start) / scale_y)
                         pixel_buffer_size = width * height * 3
                         pixels = np.empty(int(pixel_buffer_size), dtype='B')
                         patch_id = patch_identifier[regions.index(region)]
@@ -432,20 +442,47 @@ class WriteTiles(object):
             os.mkdir(x_directory)
 
     def create_patch_list(
-        self, image_x_end, image_y_end, tiles, tile_size, origin, level,
-        tile_directory
+        self, dim_ranges, tiles, tile_size, tile_directory
     ):
+        resolution_x_end = dim_ranges[0][2]
+        resolution_y_end = dim_ranges[1][2]
+        origin_x = dim_ranges[0][0]
+        origin_y = dim_ranges[1][0]
+        tiles_x, tiles_y = tiles
+
         patches = []
         patch_identifier = []
-        scale = 2 ** level
-        tile_size[0] = tile_size[0] * scale
-        tile_size[1] = tile_size[1] * scale
-        for y in range(tiles[1]):
-            y_start = origin[1] + (y * tile_size[1])
-            y_end = min((y_start + tile_size[1]) - scale, image_y_end)
-            for x in range(tiles[0]):
-                x_start = origin[0] + (x * tile_size[0])
-                x_end = min((x_start + tile_size[0]) - scale, image_x_end)
+        scale_x = dim_ranges[0][1]
+        scale_y = dim_ranges[1][1]
+        # We'll use the X scale to calculate our level.  If the X and Y scales
+        # are not eqivalent or not a power of two this will not work but that
+        # seems *highly* unlikely
+        level = math.log2(scale_x)
+        if scale_x != scale_y or not level.is_integer():
+            raise ValueError(
+                "scale_x=%d scale_y=%d do not match isyntax format " +
+                "assumptions!" % (
+                    scale_x, scale_y
+                )
+            )
+        level = int(level)
+        tile_size_x = tile_size[0] * scale_x
+        tile_size_y = tile_size[1] * scale_y
+        for y in range(tiles_y):
+            y_start = origin_y + (y * tile_size_y)
+            # Subtracting "scale_y" here makes no sense but it works and
+            # reflects the isyntax SDK examples
+            y_end = min(
+                (y_start + tile_size_y) - scale_y, resolution_y_end - scale_y
+            )
+            for x in range(tiles_x):
+                x_start = origin_x + (x * tile_size_x)
+                # Subtracting "scale_x" here makes no sense but it works and
+                # reflects the isyntax SDK examples
+                x_end = min(
+                    (x_start + tile_size_x) - scale_x,
+                    resolution_x_end - scale_x
+                )
                 patch = [x_start, x_end, y_start, y_end, level]
                 patches.append(patch)
                 # Associating spatial information (tile X and Y offset) in
