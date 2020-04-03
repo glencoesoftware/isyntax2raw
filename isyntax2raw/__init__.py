@@ -410,7 +410,7 @@ class WriteTiles(object):
             regions = source_view.requestRegions(
                 patches, envelopes, True, [0, 0, 0])
 
-            jobs = ()
+            jobs = []
             with MaxQueuePool(ThreadPoolExecutor, self.max_workers) as pool:
                 while regions:
                     regions_ready = self.pixel_engine.waitAny(regions)
@@ -456,11 +456,11 @@ class WriteTiles(object):
                         filename = self.get_tile_filename(
                             tile_directory, x_start, y_start
                         )
-                        jobs = jobs + (pool.submit(
+                        jobs.append(pool.submit(
                             write_tile, pixels, resolution,
                             x_start, y_start, width, height,
                             filename
-                        ),)
+                        ))
             wait(jobs, return_when=ALL_COMPLETED)
 
     def create_x_directory(self, tile_directory, x_start):
