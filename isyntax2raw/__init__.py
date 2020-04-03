@@ -375,7 +375,7 @@ class WriteTiles(object):
             # assemble data envelopes (== scanned areas) to extract for
             # this level
             dim_ranges = source_view.dimensionRanges(resolution)
-            print("dimension ranges = " + str(dim_ranges))
+            print("dimension ranges = %s" % dim_ranges)
             resolution_x_size = self.get_size(dim_ranges[0])
             resolution_y_size = self.get_size(dim_ranges[1])
             scale_x = dim_ranges[0][1]
