@@ -416,7 +416,11 @@ class WriteTiles(object):
                     regions_ready = self.pixel_engine.waitAny(regions)
                     for region_index, region in enumerate(regions_ready):
                         view_range = region.range
-                        print("processing tile %s" % view_range)
+                        print(
+                            "processing tile %s (%d regions ready)" % (
+                                view_range, len(regions_ready)
+                            )
+                        )
                         x_start, x_end, y_start, y_end, level = view_range
                         width = 1 + (x_end - x_start) / scale_x
                         # isyntax infrastructure should ensure this always
