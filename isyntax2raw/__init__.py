@@ -44,6 +44,8 @@ class MaxQueuePool(object):
       * https://github.com/python/cpython/pull/143
     """
     def __init__(self, executor, max_queue_size, max_workers=None):
+        if max_workers is None:
+            max_workers = max_queue_size
         self.pool = executor(max_workers=max_workers)
         self.pool_queue = BoundedSemaphore(max_queue_size)
 
