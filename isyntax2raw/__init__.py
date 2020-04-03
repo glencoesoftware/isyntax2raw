@@ -292,11 +292,11 @@ class WriteTiles(object):
             tile_directory = os.path.join(
                 self.slide_directory, "pyramid.%s" % self.file_type
             )
-            store = zarr.DirectoryStore(tile_directory)
+            self.zarr_store = zarr.DirectoryStore(tile_directory)
             if self.file_type == "n5":
-                store = zarr.N5Store(tile_directory)
-            group = zarr.group(store=store)
-            group.create_dataset(
+                self.zarr_store = zarr.N5Store(tile_directory)
+            self.zarr_group = zarr.group(store=self.zarr_store)
+            self.zarr_group.create_dataset(
                 str(resolution), shape=(3, height, width),
                 chunks=(None, self.tile_height, self.tile_width), dtype='B'
             )
@@ -346,7 +346,7 @@ class WriteTiles(object):
                     # Special case for N5/Zarr which has a single n-dimensional
                     # array representation on disk
                     pixels = self.make_planar(pixels, tile_width, tile_height)
-                    z = zarr.open(filename)[str(resolution)]
+                    z = self.zarr_group[str(resolution)]
                     z[:, y_start:y_end, x_start:x_end] = pixels
                 elif self.file_type == 'tiff':
                     # Special case for TIFF to save in planar mode using
