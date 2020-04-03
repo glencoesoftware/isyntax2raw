@@ -392,7 +392,7 @@ class WriteTiles(object):
                 resolution, resolution_x_size, resolution_y_size
             )
 
-            patches, patch_identifier = self.create_patch_list(
+            patches, patch_ids = self.create_patch_list(
                 dim_ranges, [x_tiles, y_tiles],
                 [self.tile_width, self.tile_height],
                 tile_directory
@@ -432,11 +432,11 @@ class WriteTiles(object):
                         height = int(height)
                         pixel_buffer_size = width * height * 3
                         pixels = np.empty(pixel_buffer_size, dtype='B')
-                        patch_id = patch_identifier[regions.index(region)]
+                        patch_id = patch_ids[regions.index(region)]
                         x_start, y_start = patch_id
                         x_start *= self.tile_width
                         y_start *= self.tile_height
-                        patch_identifier.remove(patch_id)
+                        patch_ids.remove(patch_id)
 
                         region.get(pixels)
                         regions.remove(region)
@@ -469,7 +469,7 @@ class WriteTiles(object):
         tiles_x, tiles_y = tiles
 
         patches = []
-        patch_identifier = []
+        patch_ids = []
         scale_x = dim_ranges[0][1]
         scale_y = dim_ranges[1][1]
         # We'll use the X scale to calculate our level.  If the X and Y scales
@@ -505,7 +505,7 @@ class WriteTiles(object):
                 patches.append(patch)
                 # Associating spatial information (tile X and Y offset) in
                 # order to identify the patches returned asynchronously
-                patch_identifier.append((x, y))
+                patch_ids.append((x, y))
 
                 self.create_x_directory(tile_directory, x * self.tile_width)
-        return patches, patch_identifier
+        return patches, patch_ids
