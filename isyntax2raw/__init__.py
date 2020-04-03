@@ -249,7 +249,11 @@ class WriteTiles(object):
         if not v.is_integer():
             # isyntax infrastructure should ensure this always divides
             # evenly
-            raise ValueError('(%d - %d) / %d results in remainder!')
+            raise ValueError(
+                '(%d - %d) / %d results in remainder!' % (
+                    dim_range[2], dim_range[0], dim_range[1]
+                )
+            )
         return v
 
     def write_label_image(self):
