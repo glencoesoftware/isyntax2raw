@@ -444,8 +444,8 @@ class WriteTiles(object):
     def create_patch_list(
         self, dim_ranges, tiles, tile_size, tile_directory
     ):
-        image_x_end = dim_ranges[0][2]
-        image_y_end = dim_ranges[1][2]
+        resolution_x_end = dim_ranges[0][2]
+        resolution_y_end = dim_ranges[1][2]
         origin_x = dim_ranges[0][0]
         origin_y = dim_ranges[1][0]
         tiles_x, tiles_y = tiles
@@ -473,14 +473,14 @@ class WriteTiles(object):
             # Subtracting "scale_y" here makes no sense but it works and
             # reflects the isyntax SDK examples
             y_end = min(
-                (y_start + tile_size_y) - scale_y, image_y_end - scale_y
+                (y_start + tile_size_y) - scale_y, resolution_y_end - scale_y
             )
             for x in range(tiles_x):
                 x_start = origin_x + (x * tile_size_x)
                 # Subtracting "scale_x" here makes no sense but it works and
                 # reflects the isyntax SDK examples
                 x_end = min(
-                    (x_start + tile_size_x) - scale_x, image_x_end - scale_x
+                    (x_start + tile_size_x) - scale_x, resolution_x_end - scale_x
                 )
                 patch = [x_start, x_end, y_start, y_end, level]
                 patches.append(patch)
