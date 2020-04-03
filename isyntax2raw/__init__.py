@@ -492,7 +492,7 @@ class WriteTiles(object):
         level = math.log2(scale_x)
         if scale_x != scale_y or not level.is_integer():
             raise ValueError(
-                "scale_x=%d scale_y=%d do not match isyntax format " \
+                "scale_x=%d scale_y=%d do not match isyntax format "
                 "assumptions!" % (
                     scale_x, scale_y
                 )
