@@ -399,6 +399,14 @@ class WriteTiles(object):
             )
 
             envelopes = source_view.dataEnvelopes(resolution)
+            # requestRegions(
+            #    self: pixelengine.PixelEngine.View,
+            #    region: List[List[int]],
+            #    dataEnvelopes: pixelengine.PixelEngine.DataEnvelopes,
+            #    enableAsyncRendering: bool=True,
+            #    backgroundColor: List[int]=[0, 0, 0],
+            #    bufferType: pixelengine.PixelEngine.BufferType=BufferType.RGB
+            # ) -> list
             regions = source_view.requestRegions(
                 patches, envelopes, True, [0, 0, 0])
 
