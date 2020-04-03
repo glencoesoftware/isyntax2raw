@@ -410,10 +410,28 @@ class WriteTiles(object):
                         view_range = region.range
                         print("processing tile %s" % view_range)
                         x_start, x_end, y_start, y_end, level = view_range
-                        width = int(1 + (x_end - x_start) / scale_x)
-                        height = int(1 + (y_end - y_start) / scale_y)
+                        width = 1 + (x_end - x_start) / scale_x
+                        # isyntax infrastructure should ensure this always
+                        # divides evenly
+                        if not width.is_integer():
+                            raise ValueError(
+                                '(1 + (%d - %d) / %d results in remainder!' % (
+                                    x_end, x_start, scale_x
+                                )
+                            )
+                        width = int(width)
+                        height = 1 + (y_end - y_start) / scale_y
+                        # isyntax infrastructure should ensure this always
+                        # divides evenly
+                        if not height.is_integer():
+                            raise ValueError(
+                                '(1 + (%d - %d) / %d results in remainder!' % (
+                                    y_end, y_start, scale_y
+                                )
+                            )
+                        height = int(height)
                         pixel_buffer_size = width * height * 3
-                        pixels = np.empty(int(pixel_buffer_size), dtype='B')
+                        pixels = np.empty(pixel_buffer_size, dtype='B')
                         patch_id = patch_identifier[regions.index(region)]
                         x_start, y_start = patch_id
                         x_start *= self.tile_width
