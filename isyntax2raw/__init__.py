@@ -8,6 +8,7 @@
 # missing please request a copy by contacting info@glencoesoftware.com
 
 import json
+import logging
 import math
 import os
 
@@ -24,6 +25,9 @@ from threading import BoundedSemaphore
 from PIL import Image
 from kajiki import PackageLoader
 from tifffile import imwrite
+
+
+log = logging.getLogger(__name__)
 
 
 class MaxQueuePool(object):
@@ -284,7 +288,7 @@ class WriteTiles(object):
             )
             with open(image_file, "wb") as image:
                 image.write(pixels)
-            print("wrote %s image" % image_type)
+            log.info("wrote %s image" % image_type)
 
     def create_tile_directory(self, resolution, width, height):
         tile_directory = os.path.join(
@@ -364,12 +368,10 @@ class WriteTiles(object):
                     ) as source, open(filename, 'wb') as destination:
                         source.save(destination)
             except Exception:
-                import traceback
-                traceback.print_exc()
-                print(
+                log.error(
                     "Failed to write tile [:, %d:%d, %d:%d] to %s" % (
                         x_start, x_end, y_start, y_end, filename
-                    )
+                    ), exc_info=True
                 )
 
         source_view = pe_in.SourceView()
@@ -377,7 +379,7 @@ class WriteTiles(object):
             # assemble data envelopes (== scanned areas) to extract for
             # this level
             dim_ranges = source_view.dimensionRanges(resolution)
-            print("dimension ranges = %s" % dim_ranges)
+            log.info("dimension ranges = %s" % dim_ranges)
             resolution_x_size = self.get_size(dim_ranges[0])
             resolution_y_size = self.get_size(dim_ranges[1])
             scale_x = dim_ranges[0][1]
@@ -386,8 +388,8 @@ class WriteTiles(object):
             x_tiles = math.ceil(resolution_x_size / self.tile_width)
             y_tiles = math.ceil(resolution_y_size / self.tile_height)
 
-            print("# of X (%d) tiles = %d" % (self.tile_width, x_tiles))
-            print("# of Y (%d) tiles = %d" % (self.tile_height, y_tiles))
+            log.info("# of X (%d) tiles = %d" % (self.tile_width, x_tiles))
+            log.info("# of Y (%d) tiles = %d" % (self.tile_height, y_tiles))
 
             # create one tile directory per resolution level if required
             tile_directory = self.create_tile_directory(
@@ -418,9 +420,11 @@ class WriteTiles(object):
                     regions_ready = self.pixel_engine.waitAny(regions)
                     for region_index, region in enumerate(regions_ready):
                         view_range = region.range
-                        print(
-                            "processing tile %s (%d regions ready)" % (
-                                view_range, len(regions_ready)
+                        log.debug(
+                            "processing tile %s (%s regions ready; "
+                            "%s regions left; %s jobs)" % (
+                                view_range, len(regions_ready), len(regions),
+                                len(jobs)
                             )
                         )
                         x_start, x_end, y_start, y_end, level = view_range
