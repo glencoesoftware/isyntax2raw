@@ -446,11 +446,10 @@ class WriteTiles(object):
                         height = int(height)
                         pixel_buffer_size = width * height * 3
                         pixels = np.empty(pixel_buffer_size, dtype='B')
-                        patch_id = patch_ids[regions.index(region)]
+                        patch_id = patch_ids.pop(regions.index(region))
                         x_start, y_start = patch_id
                         x_start *= self.tile_width
                         y_start *= self.tile_height
-                        patch_ids.remove(patch_id)
 
                         region.get(pixels)
                         regions.remove(region)
