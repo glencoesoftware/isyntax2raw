@@ -386,8 +386,8 @@ class WriteTiles(object):
             x_tiles = math.ceil(resolution_x_size / self.tile_width)
             y_tiles = math.ceil(resolution_y_size / self.tile_height)
 
-            print("# of X tiles = %s" % x_tiles)
-            print("# of Y tiles = %s" % y_tiles)
+            print("# of X (%d) tiles = %d" % (self.tile_width, x_tiles))
+            print("# of Y (%d) tiles = %d" % (self.tile_height, y_tiles))
 
             # create one tile directory per resolution level if required
             tile_directory = self.create_tile_directory(
