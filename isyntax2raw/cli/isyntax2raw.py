@@ -37,7 +37,7 @@ def cli():
     help="tile file extension (jpg, png, tiff, n5, zarr)"
 )
 @click.option(
-    "--max_workers", default=psutil.cpu_count(logical=False), type=int,
+    "--max_workers", default=4, type=int,
     show_default=True,
     help="maximum number of tile workers that will run at one time",
 )
