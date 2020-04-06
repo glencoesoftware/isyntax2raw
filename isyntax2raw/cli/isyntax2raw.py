@@ -8,7 +8,6 @@
 # support@glencoesoftware.com.
 
 import click
-import psutil
 import logging
 
 from .. import WriteTiles
