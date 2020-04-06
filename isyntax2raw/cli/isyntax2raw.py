@@ -42,14 +42,18 @@ def cli():
     help="maximum number of tile workers that will run at one time",
 )
 @click.option(
+    "--batch_size", default=250, type=int, show_default=True,
+    help="number of patches fed into the iSyntax SDK at one time"
+)
+@click.option(
     "--debug", is_flag=True,
     help="enable debugging",
 )
 @click.argument("input_path")
 @click.argument("output_path")
 def write_tiles(
-    tile_width, tile_height, resolutions, file_type, max_workers, input_path,
-    output_path, debug
+    tile_width, tile_height, resolutions, file_type, max_workers, batch_size,
+    input_path, output_path, debug
 ):
     level = logging.INFO
     if debug:
@@ -61,7 +65,7 @@ def write_tiles(
     )
     with WriteTiles(
         tile_width, tile_height, resolutions, file_type, max_workers,
-        input_path, output_path
+        batch_size, input_path, output_path
     ) as wt:
         wt.write_metadata()
         wt.write_label_image()
