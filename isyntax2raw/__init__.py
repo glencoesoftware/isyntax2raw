@@ -8,6 +8,7 @@
 # missing please request a copy by contacting info@glencoesoftware.com
 
 import json
+import logging
 import math
 import os
 
@@ -24,6 +25,9 @@ from threading import BoundedSemaphore
 from PIL import Image
 from kajiki import PackageLoader
 from tifffile import imwrite
+
+
+log = logging.getLogger(__name__)
 
 
 class MaxQueuePool(object):
@@ -44,6 +48,8 @@ class MaxQueuePool(object):
       * https://github.com/python/cpython/pull/143
     """
     def __init__(self, executor, max_queue_size, max_workers=None):
+        if max_workers is None:
+            max_workers = max_queue_size
         self.pool = executor(max_workers=max_workers)
         self.pool_queue = BoundedSemaphore(max_queue_size)
 
@@ -71,13 +77,14 @@ class WriteTiles(object):
 
     def __init__(
         self, tile_width, tile_height, resolutions, file_type, max_workers,
-        input_path, output_path
+        batch_size, input_path, output_path
     ):
         self.tile_width = tile_width
         self.tile_height = tile_height
         self.resolutions = resolutions
         self.file_type = file_type
         self.max_workers = max_workers
+        self.batch_size = batch_size
         self.input_path = input_path
         self.slide_directory = output_path
 
@@ -282,7 +289,7 @@ class WriteTiles(object):
             )
             with open(image_file, "wb") as image:
                 image.write(pixels)
-            print("wrote %s image" % image_type)
+            log.info("wrote %s image" % image_type)
 
     def create_tile_directory(self, resolution, width, height):
         tile_directory = os.path.join(
@@ -292,11 +299,11 @@ class WriteTiles(object):
             tile_directory = os.path.join(
                 self.slide_directory, "pyramid.%s" % self.file_type
             )
-            store = zarr.DirectoryStore(tile_directory)
+            self.zarr_store = zarr.DirectoryStore(tile_directory)
             if self.file_type == "n5":
-                store = zarr.N5Store(tile_directory)
-            group = zarr.group(store=store)
-            group.create_dataset(
+                self.zarr_store = zarr.N5Store(tile_directory)
+            self.zarr_group = zarr.group(store=self.zarr_store)
+            self.zarr_group.create_dataset(
                 str(resolution), shape=(3, height, width),
                 chunks=(None, self.tile_height, self.tile_width), dtype='B'
             )
@@ -346,7 +353,7 @@ class WriteTiles(object):
                     # Special case for N5/Zarr which has a single n-dimensional
                     # array representation on disk
                     pixels = self.make_planar(pixels, tile_width, tile_height)
-                    z = zarr.open(filename)[str(resolution)]
+                    z = self.zarr_group[str(resolution)]
                     z[:, y_start:y_end, x_start:x_end] = pixels
                 elif self.file_type == 'tiff':
                     # Special case for TIFF to save in planar mode using
@@ -362,12 +369,10 @@ class WriteTiles(object):
                     ) as source, open(filename, 'wb') as destination:
                         source.save(destination)
             except Exception:
-                import traceback
-                traceback.print_exc()
-                print(
+                log.error(
                     "Failed to write tile [:, %d:%d, %d:%d] to %s" % (
                         x_start, x_end, y_start, y_end, filename
-                    )
+                    ), exc_info=True
                 )
 
         source_view = pe_in.SourceView()
@@ -375,7 +380,7 @@ class WriteTiles(object):
             # assemble data envelopes (== scanned areas) to extract for
             # this level
             dim_ranges = source_view.dimensionRanges(resolution)
-            print("dimension ranges = %s" % dim_ranges)
+            log.info("dimension ranges = %s" % dim_ranges)
             resolution_x_size = self.get_size(dim_ranges[0])
             resolution_y_size = self.get_size(dim_ranges[1])
             scale_x = dim_ranges[0][1]
@@ -384,53 +389,88 @@ class WriteTiles(object):
             x_tiles = math.ceil(resolution_x_size / self.tile_width)
             y_tiles = math.ceil(resolution_y_size / self.tile_height)
 
-            print("# of X tiles = %s" % x_tiles)
-            print("# of Y tiles = %s" % y_tiles)
+            log.info("# of X (%d) tiles = %d" % (self.tile_width, x_tiles))
+            log.info("# of Y (%d) tiles = %d" % (self.tile_height, y_tiles))
 
             # create one tile directory per resolution level if required
             tile_directory = self.create_tile_directory(
                 resolution, resolution_x_size, resolution_y_size
             )
 
-            patches, patch_identifier = self.create_patch_list(
+            patches, patch_ids = self.create_patch_list(
                 dim_ranges, [x_tiles, y_tiles],
                 [self.tile_width, self.tile_height],
                 tile_directory
             )
-
             envelopes = source_view.dataEnvelopes(resolution)
-            regions = source_view.requestRegions(
-                patches, envelopes, True, [0, 0, 0])
-
-            jobs = ()
+            jobs = []
             with MaxQueuePool(ThreadPoolExecutor, self.max_workers) as pool:
-                while regions:
-                    regions_ready = self.pixel_engine.waitAny(regions)
-                    for region_index, region in enumerate(regions_ready):
-                        view_range = region.range
-                        print("processing tile %s" % view_range)
-                        x_start, x_end, y_start, y_end, level = view_range
-                        width = int(1 + (x_end - x_start) / scale_x)
-                        height = int(1 + (y_end - y_start) / scale_y)
-                        pixel_buffer_size = width * height * 3
-                        pixels = np.empty(int(pixel_buffer_size), dtype='B')
-                        patch_id = patch_identifier[regions.index(region)]
-                        x_start, y_start = patch_id
-                        x_start *= self.tile_width
-                        y_start *= self.tile_height
-                        patch_identifier.remove(patch_id)
+                for i in range(0, len(patches), self.batch_size):
+                    # requestRegions(
+                    #    self: pixelengine.PixelEngine.View,
+                    #    region: List[List[int]],
+                    #    dataEnvelopes: pixelengine.PixelEngine.DataEnvelopes,
+                    #    enableAsyncRendering: bool=True,
+                    #    backgroundColor: List[int]=[0, 0, 0],
+                    #    bufferType:
+                    #      pixelengine.PixelEngine.BufferType=BufferType.RGB
+                    # ) -> list
+                    regions = source_view.requestRegions(
+                        patches[i:i + self.batch_size], envelopes, True,
+                        [0, 0, 0]
+                    )
+                    while regions:
+                        regions_ready = self.pixel_engine.waitAny(regions)
+                        for region_index, region in enumerate(regions_ready):
+                            view_range = region.range
+                            log.debug(
+                                "processing tile %s (%s regions ready; "
+                                "%s regions left; %s jobs)" % (
+                                    view_range, len(regions_ready),
+                                    len(regions), len(jobs)
+                                )
+                            )
+                            x_start, x_end, y_start, y_end, level = view_range
+                            width = 1 + (x_end - x_start) / scale_x
+                            # isyntax infrastructure should ensure this always
+                            # divides evenly
+                            if not width.is_integer():
+                                raise ValueError(
+                                    '(1 + (%d - %d) / %d results in '
+                                    'remainder!' % (
+                                        x_end, x_start, scale_x
+                                    )
+                                )
+                            width = int(width)
+                            height = 1 + (y_end - y_start) / scale_y
+                            # isyntax infrastructure should ensure this always
+                            # divides evenly
+                            if not height.is_integer():
+                                raise ValueError(
+                                    '(1 + (%d - %d) / %d results in '
+                                    'remainder!' % (
+                                        y_end, y_start, scale_y
+                                    )
+                                )
+                            height = int(height)
+                            pixel_buffer_size = width * height * 3
+                            pixels = np.empty(pixel_buffer_size, dtype='B')
+                            patch_id = patch_ids.pop(regions.index(region))
+                            x_start, y_start = patch_id
+                            x_start *= self.tile_width
+                            y_start *= self.tile_height
 
-                        region.get(pixels)
-                        regions.remove(region)
+                            region.get(pixels)
+                            regions.remove(region)
 
-                        filename = self.get_tile_filename(
-                            tile_directory, x_start, y_start
-                        )
-                        jobs = jobs + (pool.submit(
-                            write_tile, pixels, resolution,
-                            x_start, y_start, width, height,
-                            filename
-                        ),)
+                            filename = self.get_tile_filename(
+                                tile_directory, x_start, y_start
+                            )
+                            jobs.append(pool.submit(
+                                write_tile, pixels, resolution,
+                                x_start, y_start, width, height,
+                                filename
+                            ))
             wait(jobs, return_when=ALL_COMPLETED)
 
     def create_x_directory(self, tile_directory, x_start):
@@ -451,7 +491,7 @@ class WriteTiles(object):
         tiles_x, tiles_y = tiles
 
         patches = []
-        patch_identifier = []
+        patch_ids = []
         scale_x = dim_ranges[0][1]
         scale_y = dim_ranges[1][1]
         # We'll use the X scale to calculate our level.  If the X and Y scales
@@ -460,7 +500,7 @@ class WriteTiles(object):
         level = math.log2(scale_x)
         if scale_x != scale_y or not level.is_integer():
             raise ValueError(
-                "scale_x=%d scale_y=%d do not match isyntax format " +
+                "scale_x=%d scale_y=%d do not match isyntax format "
                 "assumptions!" % (
                     scale_x, scale_y
                 )
@@ -487,7 +527,7 @@ class WriteTiles(object):
                 patches.append(patch)
                 # Associating spatial information (tile X and Y offset) in
                 # order to identify the patches returned asynchronously
-                patch_identifier.append((x, y))
+                patch_ids.append((x, y))
 
                 self.create_x_directory(tile_directory, x * self.tile_width)
-        return patches, patch_identifier
+        return patches, patch_ids

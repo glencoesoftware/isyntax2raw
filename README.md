@@ -8,8 +8,8 @@ Python tool that uses Philips' SDK to write slides in an intermediary raw format
 
 * Philips iSyntax SDK (https://openpathology.philips.com)
 
-The iSyntax SDK must be downloaded separately from Philips and the relevant
-license agreement agreed to before any conversion can take place.
+The iSyntax SDK __must__ be downloaded separately from Philips and the
+relevant license agreement agreed to before any conversion can take place.
 
 ## Usage
 
@@ -27,9 +27,29 @@ macro/label images will be created.  The default format is N5.  Additional
 metadata is written to a JSON file.  Be mindful of available disk space, as
 larger .isyntax files can result in >20 GB of tiles.
 
-Use of a n5 or zarr `--file_type` will result in losslessly compressed output.
-These are the only formats that are currently supported by the downstream
-`raw2ometiff`.
+Use of a n5 (the default) or zarr `--file_type` will result in losslessly
+compressed output.  These are the only formats that are currently
+supported by the downstream `raw2ometiff`.
+
+## Performance
+
+This package is __highly__ sensitive to underlying hardware as well as
+the following configuration options:
+
+ * `--max_workers`
+ * `--tile_width`
+ * `--tile_height`
+ * `--batch_size`
+
+On systems with significant I/O bandwidth, particularly SATA or
+NVMe based storage, we have found sharply diminishing returns with worker
+counts > 4.  There are significant performance gains to be had utilizing
+larger tile sizes but be mindful of the consequences on the downstream
+workflow.  You may find increasing the batch size on systems with very
+high single core performance to give modest performance gains.
+
+In general, expect to need to tune the above settings and measure
+relative performance.
 
 ## License
 
