@@ -303,9 +303,11 @@ class WriteTiles(object):
             if self.file_type == "n5":
                 self.zarr_store = zarr.N5Store(tile_directory)
             self.zarr_group = zarr.group(store=self.zarr_store)
+            # important to explicitly set the channel chunk size to 1
+            # setting to None causes all 3 channels to be chunked together
             self.zarr_group.create_dataset(
                 str(resolution), shape=(3, height, width),
-                chunks=(None, self.tile_height, self.tile_width), dtype='B'
+                chunks=(1, self.tile_height, self.tile_width), dtype='B'
             )
         else:
             os.mkdir(tile_directory)
