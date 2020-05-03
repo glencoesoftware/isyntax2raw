@@ -7,6 +7,7 @@
 # file you can find at the root of the distribution bundle.  If the file is
 # missing please request a copy by contacting info@glencoesoftware.com
 
+from io import BytesIO
 import json
 import logging
 import math
@@ -29,6 +30,8 @@ from tifffile import imwrite
 
 log = logging.getLogger(__name__)
 
+# version of the N5/Zarr layout
+LAYOUT_VERSION = 1
 
 class MaxQueuePool(object):
     """This Class wraps a concurrent.futures.Executor
@@ -204,12 +207,12 @@ class WriteTiles(object):
                             size_y = level_size_y
 
                 elif img.IMAGE_TYPE == "LABELIMAGE":
-                    label_x = self.get_size(img.IMAGE_DIMENSION_RANGES[0])
-                    label_y = self.get_size(img.IMAGE_DIMENSION_RANGES[1])
+                    label_x = self.get_size(img.IMAGE_DIMENSION_RANGES[0]) + 1
+                    label_y = self.get_size(img.IMAGE_DIMENSION_RANGES[1]) + 1
 
                 elif img.IMAGE_TYPE == "MACROIMAGE":
-                    macro_x = self.get_size(img.IMAGE_DIMENSION_RANGES[0])
-                    macro_y = self.get_size(img.IMAGE_DIMENSION_RANGES[1])
+                    macro_x = self.get_size(img.IMAGE_DIMENSION_RANGES[0]) + 1
+                    macro_y = self.get_size(img.IMAGE_DIMENSION_RANGES[1]) + 1
 
                 metadata["Image #" + str(image)] = image_metadata
 
@@ -265,11 +268,11 @@ class WriteTiles(object):
 
     def write_label_image(self):
         '''write the label image (if present) as a JPEG file'''
-        self.write_image_type("LABELIMAGE")
+        self.write_image_type("LABELIMAGE", 1)
 
     def write_macro_image(self):
         '''write the macro image (if present) as a JPEG file'''
-        self.write_image_type("MACROIMAGE")
+        self.write_image_type("MACROIMAGE", 2)
 
     def find_image_type(self, image_type):
         '''look up a given image type in the pixel engine'''
@@ -279,35 +282,48 @@ class WriteTiles(object):
                 return pe_in[index]
         return None
 
-    def write_image_type(self, image_type):
+    def write_image_type(self, image_type, series):
         '''write an image of the specified type'''
         image_container = self.find_image_type(image_type)
         if image_container is not None:
             pixels = image_container.IMAGE_DATA
-            image_file = os.path.join(
-                self.slide_directory, '%s.jpg' % image_type
-            )
-            with open(image_file, "wb") as image:
-                image.write(pixels)
+
+            # pixels are JPEG compressed, need to decompress first
+            img = Image.open(BytesIO(pixels))
+            width = img.width
+            height = img.height
+
+            tile_dir = self.create_tile_directory(series, 0, width, height)
+            tile = self.zarr_group["%d/0" % series]
+            tile.attrs['image type'] = image_type
+            for channel in range(0, 3):
+                band = np.array(img.getdata(band=channel))
+                band.shape = (height, width)
+                tile[0, 0, channel] = band
+
             log.info("wrote %s image" % image_type)
 
-    def create_tile_directory(self, resolution, width, height):
+    def create_tile_directory(self, series, resolution, width, height):
         tile_directory = os.path.join(
-            self.slide_directory, str(resolution)
+            self.slide_directory, "%s/%s" % (series, resolution)
         )
         if self.file_type in ("n5", "zarr"):
             tile_directory = os.path.join(
-                self.slide_directory, "pyramid.%s" % self.file_type
+                self.slide_directory, "data.%s" % self.file_type
             )
             self.zarr_store = zarr.DirectoryStore(tile_directory)
             if self.file_type == "n5":
                 self.zarr_store = zarr.N5Store(tile_directory)
             self.zarr_group = zarr.group(store=self.zarr_store)
-            # important to explicitly set the channel chunk size to 1
-            # setting to None causes all 3 channels to be chunked together
+            self.zarr_group.attrs['bioformats2raw.layout'] = LAYOUT_VERSION
+
+            # important to explicitly set the chunk size to 1 for non-XY dims
+            # setting to None may cause all planes to be chunked together
+            # ordering is TZCYX and hard-coded since Z and T are not present
             self.zarr_group.create_dataset(
-                str(resolution), shape=(3, height, width),
-                chunks=(1, self.tile_height, self.tile_width), dtype='B'
+                "%s/%s" % (str(series), str(resolution)),
+                shape=(1, 1, 3, height, width),
+                chunks=(1, 1, 1, self.tile_height, self.tile_width), dtype='B'
             )
         else:
             os.mkdir(tile_directory)
@@ -355,8 +371,8 @@ class WriteTiles(object):
                     # Special case for N5/Zarr which has a single n-dimensional
                     # array representation on disk
                     pixels = self.make_planar(pixels, tile_width, tile_height)
-                    z = self.zarr_group[str(resolution)]
-                    z[:, y_start:y_end, x_start:x_end] = pixels
+                    z = self.zarr_group["0/%d" % resolution]
+                    z[0, 0, :, y_start:y_end, x_start:x_end] = pixels
                 elif self.file_type == 'tiff':
                     # Special case for TIFF to save in planar mode using
                     # deinterleaving and the tifffile library; planar data
@@ -396,7 +412,7 @@ class WriteTiles(object):
 
             # create one tile directory per resolution level if required
             tile_directory = self.create_tile_directory(
-                resolution, resolution_x_size, resolution_y_size
+                0, resolution, resolution_x_size, resolution_y_size
             )
 
             patches, patch_ids = self.create_patch_list(
