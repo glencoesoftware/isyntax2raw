@@ -33,6 +33,7 @@ log = logging.getLogger(__name__)
 # version of the N5/Zarr layout
 LAYOUT_VERSION = 1
 
+
 class MaxQueuePool(object):
     """This Class wraps a concurrent.futures.Executor
     limiting the size of its task queue.
@@ -293,7 +294,7 @@ class WriteTiles(object):
             width = img.width
             height = img.height
 
-            tile_dir = self.create_tile_directory(series, 0, width, height)
+            self.create_tile_directory(series, 0, width, height)
             tile = self.zarr_group["%d/0" % series]
             tile.attrs['image type'] = image_type
             for channel in range(0, 3):
