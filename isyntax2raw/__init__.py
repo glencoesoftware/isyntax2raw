@@ -25,7 +25,6 @@ from threading import BoundedSemaphore
 
 from PIL import Image
 from kajiki import PackageLoader
-from tifffile import imwrite
 
 
 log = logging.getLogger(__name__)
@@ -92,7 +91,7 @@ class WriteTiles(object):
         self.input_path = input_path
         self.slide_directory = output_path
 
-        os.mkdir(self.slide_directory)
+        os.makedirs(self.slide_directory, exist_ok=True)
 
         render_context = softwarerendercontext.SoftwareRenderContext()
         render_backend = softwarerenderbackend.SoftwareRenderBackend()
@@ -306,38 +305,22 @@ class WriteTiles(object):
 
     def create_tile_directory(self, series, resolution, width, height):
         tile_directory = os.path.join(
-            self.slide_directory, "%s/%s" % (series, resolution)
+            self.slide_directory, "data.%s" % self.file_type
         )
-        if self.file_type in ("n5", "zarr"):
-            tile_directory = os.path.join(
-                self.slide_directory, "data.%s" % self.file_type
-            )
-            self.zarr_store = zarr.DirectoryStore(tile_directory)
-            if self.file_type == "n5":
-                self.zarr_store = zarr.N5Store(tile_directory)
-            self.zarr_group = zarr.group(store=self.zarr_store)
-            self.zarr_group.attrs['bioformats2raw.layout'] = LAYOUT_VERSION
+        self.zarr_store = zarr.DirectoryStore(tile_directory)
+        if self.file_type == "n5":
+            self.zarr_store = zarr.N5Store(tile_directory)
+        self.zarr_group = zarr.group(store=self.zarr_store)
+        self.zarr_group.attrs['bioformats2raw.layout'] = LAYOUT_VERSION
 
-            # important to explicitly set the chunk size to 1 for non-XY dims
-            # setting to None may cause all planes to be chunked together
-            # ordering is TZCYX and hard-coded since Z and T are not present
-            self.zarr_group.create_dataset(
-                "%s/%s" % (str(series), str(resolution)),
-                shape=(1, 1, 3, height, width),
-                chunks=(1, 1, 1, self.tile_height, self.tile_width), dtype='B'
-            )
-        else:
-            os.mkdir(tile_directory)
-        return tile_directory
-
-    def get_tile_filename(self, tile_directory, x_start, y_start):
-        filename = os.path.join(
-            os.path.join(tile_directory, str(x_start)),
-            "%s.%s" % (y_start, self.file_type)
+        # important to explicitly set the chunk size to 1 for non-XY dims
+        # setting to None may cause all planes to be chunked together
+        # ordering is TZCYX and hard-coded since Z and T are not present
+        self.zarr_group.create_dataset(
+            "%s/%s" % (str(series), str(resolution)),
+            shape=(1, 1, 3, height, width),
+            chunks=(1, 1, 1, self.tile_height, self.tile_width), dtype='B'
         )
-        if self.file_type in ("n5", "zarr"):
-            filename = tile_directory
-        return filename
 
     def make_planar(self, pixels, tile_width, tile_height):
         r = pixels[0::3]
@@ -363,34 +346,19 @@ class WriteTiles(object):
 
         def write_tile(
             pixels, resolution, x_start, y_start, tile_width, tile_height,
-            filename
         ):
             x_end = x_start + tile_width
             y_end = y_start + tile_height
             try:
-                if self.file_type in ("n5", "zarr"):
-                    # Special case for N5/Zarr which has a single n-dimensional
-                    # array representation on disk
-                    pixels = self.make_planar(pixels, tile_width, tile_height)
-                    z = self.zarr_group["0/%d" % resolution]
-                    z[0, 0, :, y_start:y_end, x_start:x_end] = pixels
-                elif self.file_type == 'tiff':
-                    # Special case for TIFF to save in planar mode using
-                    # deinterleaving and the tifffile library; planar data
-                    # is much more performant with the Bio-Formats API
-                    pixels = self.make_planar(pixels, tile_width, tile_height)
-                    with open(filename, 'wb') as destination:
-                        imwrite(destination, pixels, planarconfig='SEPARATE')
-                else:
-                    with Image.frombuffer(
-                        'RGB', (int(tile_width), int(tile_height)),
-                        pixels, 'raw', 'RGB', 0, 1
-                    ) as source, open(filename, 'wb') as destination:
-                        source.save(destination)
+                # Special case for N5/Zarr which has a single n-dimensional
+                # array representation on disk
+                pixels = self.make_planar(pixels, tile_width, tile_height)
+                z = self.zarr_group["0/%d" % resolution]
+                z[0, 0, :, y_start:y_end, x_start:x_end] = pixels
             except Exception:
                 log.error(
-                    "Failed to write tile [:, %d:%d, %d:%d] to %s" % (
-                        x_start, x_end, y_start, y_end, filename
+                    "Failed to write tile [:, %d:%d, %d:%d]" % (
+                        x_start, x_end, y_start, y_end
                     ), exc_info=True
                 )
 
@@ -482,23 +450,11 @@ class WriteTiles(object):
                             region.get(pixels)
                             regions.remove(region)
 
-                            filename = self.get_tile_filename(
-                                tile_directory, x_start, y_start
-                            )
                             jobs.append(pool.submit(
                                 write_tile, pixels, resolution,
-                                x_start, y_start, width, height,
-                                filename
+                                x_start, y_start, width, height
                             ))
             wait(jobs, return_when=ALL_COMPLETED)
-
-    def create_x_directory(self, tile_directory, x_start):
-        if self.file_type in ("n5", "zarr"):
-            return
-
-        x_directory = os.path.join(tile_directory, str(x_start))
-        if not os.path.exists(x_directory):
-            os.mkdir(x_directory)
 
     def create_patch_list(
         self, dim_ranges, tiles, tile_size, tile_directory
@@ -547,6 +503,4 @@ class WriteTiles(object):
                 # Associating spatial information (tile X and Y offset) in
                 # order to identify the patches returned asynchronously
                 patch_ids.append((x, y))
-
-                self.create_x_directory(tile_directory, x * self.tile_width)
         return patches, patch_ids
