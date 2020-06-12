@@ -350,8 +350,8 @@ class WriteTiles(object):
             x_end = x_start + tile_width
             y_end = y_start + tile_height
             try:
-                # Special case for N5/Zarr which has a single n-dimensional
-                # array representation on disk
+                # N5/Zarr has a single n-dimensional array representation on
+                # disk (not interleaved RGB)
                 pixels = self.make_planar(pixels, tile_width, tile_height)
                 z = self.zarr_group["0/%d" % resolution]
                 z[0, 0, :, y_start:y_end, x_start:x_end] = pixels
