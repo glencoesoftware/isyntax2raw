@@ -80,7 +80,7 @@ setup(name='isyntax2raw',
       setup_requires=['flake8'],
       install_requires=[
           'click==7.0',
-          'pillow==6.2.2',
+          'pillow>=7.1.0',
           'numpy==1.17.3',
           'zarr==2.4.0',
           'kajiki==0.8.2',
