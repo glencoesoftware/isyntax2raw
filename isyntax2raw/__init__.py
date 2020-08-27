@@ -571,8 +571,8 @@ class WriteTiles(object):
                         [0, 0, 0]
                     )
                     while regions:
-
                         regions_ready = self.wait_any(regions)
+
                         for region_index, region in enumerate(regions_ready):
                             view_range = region.range
                             log.debug(
