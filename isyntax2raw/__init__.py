@@ -314,8 +314,9 @@ class WriteTiles(object):
             return pe_in.barcode
 
     def data_envelopes(self, image, resolution):
+        pe_in = self.pixel_engine["in"]
         if self.sdk_v1:
-            return image.IMAGE_VALID_DATA_ENVELOPES
+            return pe_in.SourceView().dataEnvelopes(resolution)
         else:
             return image.source_view.data_envelopes(resolution)
 
@@ -327,8 +328,9 @@ class WriteTiles(object):
             return pe_in.derivation_description
 
     def dimension_ranges(self, image, resolution):
+        pe_in = self.pixel_engine["in"]
         if self.sdk_v1:
-            return image.SourceView().dimensionRanges(resolution)
+            return pe_in.SourceView().dimensionRanges(resolution)
         else:
             return image.source_view.dimension_ranges(resolution)
 
@@ -341,13 +343,14 @@ class WriteTiles(object):
     def image_type(self, image_no):
         pe_in = self.pixel_engine["in"]
         if self.sdk_v1:
-            return pe_in.IMAGE_TYPE
+            return pe_in[image_no].IMAGE_TYPE
         else:
             return pe_in[image_no].image_type
 
     def num_derived_levels(self, image):
+        pe_in = self.pixel_engine["in"]
         if self.sdk_v1:
-            return image.numLevels()
+            return pe_in.numLevels()
         else:
             return image.source_view.num_derived_levels
 
@@ -490,6 +493,7 @@ class WriteTiles(object):
 
     def write_pyramid(self):
         '''write the slide's pyramid as a set of tiles'''
+        pe_in = self.pixel_engine["in"]
         image = self.find_image_type("WSI")
 
         scanned_areas = self.data_envelopes(image, 0)
@@ -559,7 +563,7 @@ class WriteTiles(object):
                     #      pixelengine.PixelEngine.BufferType=BufferType.RGB
                     # ) -> list
                     if self.sdk_v1:
-                        request_regions = image.SourceView().requestRegions
+                        request_regions = pe_in.SourceView().requestRegions
                     else:
                         request_regions = image.source_view.request_regions
                     regions = request_regions(
