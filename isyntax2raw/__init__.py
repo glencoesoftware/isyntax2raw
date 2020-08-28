@@ -254,21 +254,23 @@ class WriteTiles(object):
                 img.lossy_image_compression_method,
             "Lossy image compression ratio":
                 img.lossy_image_compression_ratio,
+            "Image dimension names":
+                view.dimension_names,
+            "Image dimension types":
+                view.dimension_types,
+            "Image dimension units":
+                view.dimension_units,
+            "Image dimension discrete values":
+                view.dimension_discrete_values,
             "Image scale factor":
                 image_scale_factor,
-            "Color space transform":
-                img.colorspace_transform,
             "Block size":
-                img.block_size,
-            "Number of tiles":
-                img.num_tiles,
+                img.block_size(),
         }
         if image_type == "WSI":
-            image_metadata["Image dimension names"] = view.dimension_names
-            image_metadata["Image dimension types"] = view.dimension_types
-            image_metadata["Image dimension units"] = view.dimension_units
-            image_metadata["Image dimension discrete values"] = \
-                view.dimension_discrete_values
+            image_metadata["Color space transform"] = \
+                img.colorspace_transform
+            image_metadata["Number of tiles"] = img.num_tiles
 
             self.pixel_size_x = image_scale_factor[0]
             self.pixel_size_y = image_scale_factor[1]
@@ -286,7 +288,7 @@ class WriteTiles(object):
                 self.num_derived_levels(img)
 
             for resolution in range(self.num_derived_levels(img)):
-                dim_ranges = view.dimension_ranges(resolution)
+                dim_ranges = self.dimension_ranges(img, resolution)
                 level_size_x = self.get_size(dim_ranges[0])
                 level_size_y = self.get_size(dim_ranges[1])
                 image_metadata["Level sizes #%s" % resolution] = {
