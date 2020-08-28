@@ -255,7 +255,13 @@ class WriteTiles(object):
             "Lossy image compression ratio":
                 img.lossy_image_compression_ratio,
             "Image scale factor":
-                view.scale
+                image_scale_factor,
+            "Color space transform":
+                img.colorspace_transform,
+            "Block size":
+                img.block_size,
+            "Number of tiles":
+                img.num_tiles,
         }
         if image_type == "WSI":
             image_metadata["Image dimension names"] = view.dimension_names
