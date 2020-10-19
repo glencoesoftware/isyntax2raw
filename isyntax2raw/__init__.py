@@ -419,7 +419,7 @@ class WriteTiles(object):
         template = loader.import_("isyntax2raw.resources.ome_template")
         xml = template(xml_values).render()
         ome_xml_file = os.path.join(self.slide_directory, "METADATA.ome.xml")
-        with open(ome_xml_file, "w") as omexml:
+        with open(ome_xml_file, "w", encoding="utf-8") as omexml:
             omexml.write(xml)
 
     def get_size(self, dim_range):
