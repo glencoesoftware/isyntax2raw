@@ -80,7 +80,7 @@ class WriteTiles(object):
 
     def __init__(
         self, tile_width, tile_height, resolutions, file_type, max_workers,
-        batch_size, input_path, output_path
+        batch_size, input_path, output_path, fill_color
     ):
         self.tile_width = tile_width
         self.tile_height = tile_height
@@ -90,6 +90,7 @@ class WriteTiles(object):
         self.batch_size = batch_size
         self.input_path = input_path
         self.slide_directory = output_path
+        self.fill_color = fill_color
 
         os.makedirs(self.slide_directory, exist_ok=True)
 
@@ -576,7 +577,7 @@ class WriteTiles(object):
                         request_regions = image.source_view.request_regions
                     regions = request_regions(
                         patches[i:i + self.batch_size], envelopes, True,
-                        [0, 0, 0]
+                        [self.fill_color] * 3
                     )
                     while regions:
                         regions_ready = self.wait_any(regions)
