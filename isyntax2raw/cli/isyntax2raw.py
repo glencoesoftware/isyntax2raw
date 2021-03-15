@@ -46,6 +46,11 @@ def cli():
     help="number of patches fed into the iSyntax SDK at one time"
 )
 @click.option(
+    "--fill_color", type=click.IntRange(min=0, max=255), default=0,
+    show_default=True,
+    help="background color for missing tiles (0-255)"
+)
+@click.option(
     "--debug", is_flag=True,
     help="enable debugging",
 )
@@ -53,7 +58,7 @@ def cli():
 @click.argument("output_path")
 def write_tiles(
     tile_width, tile_height, resolutions, file_type, max_workers, batch_size,
-    input_path, output_path, debug
+    input_path, output_path, fill_color, debug
 ):
     level = logging.INFO
     if debug:
@@ -65,7 +70,7 @@ def write_tiles(
     )
     with WriteTiles(
         tile_width, tile_height, resolutions, file_type, max_workers,
-        batch_size, input_path, output_path
+        batch_size, input_path, output_path, fill_color
     ) as wt:
         wt.write_metadata()
         wt.write_label_image()

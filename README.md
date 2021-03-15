@@ -31,6 +31,13 @@ Use of a n5 (the default) or zarr `--file_type` will result in losslessly
 compressed output.  These are the only formats that are currently
 supported by the downstream `raw2ometiff`.
 
+## Background color
+
+Any missing tiles are filled with 0 by default, which displays as black.
+The fill value can be changed using the `--fill_color` option, which accepts
+a single integer between 0 and 255 inclusive.  Setting `--fill_color=255`
+will cause any missing tiles to display as white.
+
 ## Performance
 
 This package is __highly__ sensitive to underlying hardware as well as
