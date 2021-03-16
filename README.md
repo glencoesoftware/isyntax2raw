@@ -23,13 +23,13 @@ Output tile width and height can optionally be specified; default values are
 detailed in `--help`.
 
 A directory structure containing the pyramid tiles at all resolutions and
-macro/label images will be created.  The default format is N5.  Additional
+macro/label images will be created.  The default format is Zarr.  Additional
 metadata is written to a JSON file.  Be mindful of available disk space, as
 larger .isyntax files can result in >20 GB of tiles.
 
-Use of a n5 (the default) or zarr `--file_type` will result in losslessly
-compressed output.  These are the only formats that are currently
-supported by the downstream `raw2ometiff`.
+Use of the Zarr file type will result in losslessly compressed output.  This
+is the only format currently supported by the downstream `raw2ometiff` (as of
+version 0.3.0).
 
 ## Background color
 

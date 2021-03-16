@@ -32,11 +32,6 @@ def cli():
     help="number of pyramid resolutions to generate [default: all]"
 )
 @click.option(
-    "--file_type", type=click.Choice(['n5', 'zarr']), default="n5",
-    show_default=True,
-    help="tile file extension"
-)
-@click.option(
     "--max_workers", default=4, type=int,
     show_default=True,
     help="maximum number of tile workers that will run at one time",
@@ -57,7 +52,7 @@ def cli():
 @click.argument("input_path")
 @click.argument("output_path")
 def write_tiles(
-    tile_width, tile_height, resolutions, file_type, max_workers, batch_size,
+    tile_width, tile_height, resolutions, max_workers, batch_size,
     input_path, output_path, fill_color, debug
 ):
     level = logging.INFO
@@ -69,7 +64,7 @@ def write_tiles(
                "(%(thread)10s) %(message)s"
     )
     with WriteTiles(
-        tile_width, tile_height, resolutions, file_type, max_workers,
+        tile_width, tile_height, resolutions, max_workers,
         batch_size, input_path, output_path, fill_color
     ) as wt:
         wt.write_metadata()

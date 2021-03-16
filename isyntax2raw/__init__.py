@@ -29,7 +29,7 @@ from kajiki import PackageLoader
 
 log = logging.getLogger(__name__)
 
-# version of the N5/Zarr layout
+# version of the Zarr layout
 LAYOUT_VERSION = 1
 
 
@@ -79,13 +79,12 @@ class MaxQueuePool(object):
 class WriteTiles(object):
 
     def __init__(
-        self, tile_width, tile_height, resolutions, file_type, max_workers,
+        self, tile_width, tile_height, resolutions, max_workers,
         batch_size, input_path, output_path, fill_color
     ):
         self.tile_width = tile_width
         self.tile_height = tile_height
         self.resolutions = resolutions
-        self.file_type = file_type
         self.max_workers = max_workers
         self.batch_size = batch_size
         self.input_path = input_path
@@ -475,11 +474,9 @@ class WriteTiles(object):
 
     def create_tile_directory(self, series, resolution, width, height):
         tile_directory = os.path.join(
-            self.slide_directory, "data.%s" % self.file_type
+            self.slide_directory, "data.zarr"
         )
         self.zarr_store = zarr.DirectoryStore(tile_directory)
-        if self.file_type == "n5":
-            self.zarr_store = zarr.N5Store(tile_directory)
         self.zarr_group = zarr.group(store=self.zarr_store)
         self.zarr_group.attrs['bioformats2raw.layout'] = LAYOUT_VERSION
 
@@ -520,7 +517,7 @@ class WriteTiles(object):
             x_end = x_start + tile_width
             y_end = y_start + tile_height
             try:
-                # N5/Zarr has a single n-dimensional array representation on
+                # Zarr has a single n-dimensional array representation on
                 # disk (not interleaved RGB)
                 pixels = self.make_planar(pixels, tile_width, tile_height)
                 z = self.zarr_group["0/%d" % resolution]
