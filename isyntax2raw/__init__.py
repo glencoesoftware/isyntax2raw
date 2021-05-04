@@ -473,7 +473,7 @@ class WriteTiles(object):
             log.info("wrote %s image" % image_type)
 
     def create_tile_directory(self, series, resolution, width, height):
-        self.zarr_store = zarr.DirectoryStore(self.slide_directory)
+        self.zarr_store = zarr.NestedDirectoryStore(self.slide_directory)
         self.zarr_group = zarr.group(store=self.zarr_store)
         self.zarr_group.attrs['bioformats2raw.layout'] = LAYOUT_VERSION
 
