@@ -30,7 +30,7 @@ from kajiki import PackageLoader
 log = logging.getLogger(__name__)
 
 # version of the Zarr layout
-LAYOUT_VERSION = 1
+LAYOUT_VERSION = 3
 
 
 class MaxQueuePool(object):
@@ -91,7 +91,7 @@ class WriteTiles(object):
         self.slide_directory = output_path
         self.fill_color = fill_color
 
-        os.makedirs(self.slide_directory, exist_ok=True)
+        os.makedirs(os.path.join(self.slide_directory, "OME"), exist_ok=True)
 
         render_context = softwarerendercontext.SoftwareRenderContext()
         render_backend = softwarerenderbackend.SoftwareRenderBackend()
@@ -377,7 +377,7 @@ class WriteTiles(object):
 
     def write_metadata(self):
         '''write metadata to a JSON file'''
-        metadata_file = os.path.join(self.slide_directory, "METADATA.json")
+        metadata_file = os.path.join(self.slide_directory, "OME", "METADATA.json")
 
         with open(metadata_file, "w", encoding="utf-8") as f:
             metadata = self.get_metadata()
@@ -418,7 +418,7 @@ class WriteTiles(object):
         loader = PackageLoader()
         template = loader.import_("isyntax2raw.resources.ome_template")
         xml = template(xml_values).render()
-        ome_xml_file = os.path.join(self.slide_directory, "METADATA.ome.xml")
+        ome_xml_file = os.path.join(self.slide_directory, "OME", "METADATA.ome.xml")
         with open(ome_xml_file, "w", encoding="utf-8") as omexml:
             omexml.write(xml)
 
@@ -473,10 +473,7 @@ class WriteTiles(object):
             log.info("wrote %s image" % image_type)
 
     def create_tile_directory(self, series, resolution, width, height):
-        tile_directory = os.path.join(
-            self.slide_directory, "data.zarr"
-        )
-        self.zarr_store = zarr.DirectoryStore(tile_directory)
+        self.zarr_store = zarr.DirectoryStore(self.slide_directory)
         self.zarr_group = zarr.group(store=self.zarr_store)
         self.zarr_group.attrs['bioformats2raw.layout'] = LAYOUT_VERSION
 
