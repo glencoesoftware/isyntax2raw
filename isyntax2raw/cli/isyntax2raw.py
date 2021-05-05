@@ -46,7 +46,7 @@ def cli():
     help="background color for missing tiles (0-255)"
 )
 @click.option(
-    "--nested/--no-nested", show_default=True,
+    "--nested/--no-nested", default=True, show_default=True,
     help="Whether to use '/' as the chunk path separator"
 )
 @click.option(
