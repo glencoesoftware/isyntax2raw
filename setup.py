@@ -84,6 +84,7 @@ setup(name='isyntax2raw',
           'numpy==1.17.3',
           'zarr==2.8.1',
           'kajiki==0.8.2',
+          'fsspec>=0.9.0',
       ],
       tests_require=[
           'flake8',
