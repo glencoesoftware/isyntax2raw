@@ -483,6 +483,7 @@ class WriteTiles(object):
         if not self.nested:
             dimension_separator = '.'
         self.zarr_store = FSStore(
+            self.slide_directory,
             dimension_separator=dimension_separator,
             normalize_keys=True
         )
