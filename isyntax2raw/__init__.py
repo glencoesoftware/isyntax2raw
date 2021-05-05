@@ -25,6 +25,7 @@ from threading import BoundedSemaphore
 
 from PIL import Image
 from kajiki import PackageLoader
+from zarr.storage import FSStore
 
 
 log = logging.getLogger(__name__)
@@ -478,7 +479,13 @@ class WriteTiles(object):
             log.info("wrote %s image" % image_type)
 
     def create_tile_directory(self, series, resolution, width, height):
-        self.zarr_store = zarr.NestedDirectoryStore(self.slide_directory)
+        dimension_separator = '/'
+        if not self.nested:
+            dimension_separator = '.'
+        self.zarr_store = FSStore(
+            dimension_separator=dimension_separator,
+            normalize_keys=True
+        )
         self.zarr_group = zarr.group(store=self.zarr_store)
         self.zarr_group.attrs['bioformats2raw.layout'] = LAYOUT_VERSION
 
