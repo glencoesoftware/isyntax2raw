@@ -377,7 +377,9 @@ class WriteTiles(object):
 
     def write_metadata(self):
         '''write metadata to a JSON file'''
-        metadata_file = os.path.join(self.slide_directory, "OME", "METADATA.json")
+        metadata_file = os.path.join(
+            self.slide_directory, "OME", "METADATA.json"
+        )
 
         with open(metadata_file, "w", encoding="utf-8") as f:
             metadata = self.get_metadata()
@@ -418,7 +420,9 @@ class WriteTiles(object):
         loader = PackageLoader()
         template = loader.import_("isyntax2raw.resources.ome_template")
         xml = template(xml_values).render()
-        ome_xml_file = os.path.join(self.slide_directory, "OME", "METADATA.ome.xml")
+        ome_xml_file = os.path.join(
+            self.slide_directory, "OME", "METADATA.ome.xml"
+        )
         with open(ome_xml_file, "w", encoding="utf-8") as omexml:
             omexml.write(xml)
 
