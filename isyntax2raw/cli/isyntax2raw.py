@@ -46,6 +46,10 @@ def cli():
     help="background color for missing tiles (0-255)"
 )
 @click.option(
+    "--nested/--no-nested", show_default=True,
+    help="Whether to use '/' as the chunk path separator"
+)
+@click.option(
     "--debug", is_flag=True,
     help="enable debugging",
 )
@@ -53,7 +57,7 @@ def cli():
 @click.argument("output_path")
 def write_tiles(
     tile_width, tile_height, resolutions, max_workers, batch_size,
-    input_path, output_path, fill_color, debug
+    fill_color, nested, debug, input_path, output_path
 ):
     level = logging.INFO
     if debug:
@@ -65,7 +69,7 @@ def write_tiles(
     )
     with WriteTiles(
         tile_width, tile_height, resolutions, max_workers,
-        batch_size, input_path, output_path, fill_color
+        batch_size, fill_color, nested, input_path, output_path
     ) as wt:
         wt.write_metadata()
         wt.write_label_image()

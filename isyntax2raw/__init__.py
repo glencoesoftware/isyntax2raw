@@ -80,16 +80,17 @@ class WriteTiles(object):
 
     def __init__(
         self, tile_width, tile_height, resolutions, max_workers,
-        batch_size, input_path, output_path, fill_color
+        batch_size, fill_color, nested, input_path, output_path
     ):
         self.tile_width = tile_width
         self.tile_height = tile_height
         self.resolutions = resolutions
         self.max_workers = max_workers
         self.batch_size = batch_size
+        self.fill_color = fill_color
+        self.nested = nested
         self.input_path = input_path
         self.slide_directory = output_path
-        self.fill_color = fill_color
 
         os.makedirs(os.path.join(self.slide_directory, "OME"), exist_ok=True)
 
