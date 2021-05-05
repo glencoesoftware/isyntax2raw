@@ -485,7 +485,8 @@ class WriteTiles(object):
         self.zarr_store = FSStore(
             self.slide_directory,
             dimension_separator=dimension_separator,
-            normalize_keys=True
+            normalize_keys=True,
+            auto_mkdir=True
         )
         self.zarr_group = zarr.group(store=self.zarr_store)
         self.zarr_group.attrs['bioformats2raw.layout'] = LAYOUT_VERSION
