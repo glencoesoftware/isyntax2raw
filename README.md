@@ -6,16 +6,23 @@ Python tool that uses Philips' SDK to write slides in an intermediary raw format
 
 ## Requirements
 
+* Python 3.6+
 * Philips iSyntax SDK (https://openpathology.philips.com)
 
 The iSyntax SDK __must__ be downloaded separately from Philips and the
 relevant license agreement agreed to before any conversion can take place.
 
+As of version 0.4.0, which has a Python 3.6+ requirement, the supported
+iSyntax SDK versions and environments are as follows:
+
+* iSyntax SDK 1.2.1 (CentOS 7, Ubuntu 18.04, Windows 10 64-bit)
+* iSyntax SDK 2.0 (CentOS 8, Ubuntu 18.04, Windows 10 64-bit)
+
 ## Usage
 
 Basic usage is:
 
-    isyntax2raw write_tiles /path/to/input.isyntax /path/to/tile/directory
+    isyntax2raw write_tiles /path/to/input.isyntax /path/to/directory.zarr
 
 Please see `isyntax2raw write_tiles --help` for detailed information.
 
@@ -23,13 +30,13 @@ Output tile width and height can optionally be specified; default values are
 detailed in `--help`.
 
 A directory structure containing the pyramid tiles at all resolutions and
-macro/label images will be created.  The default format is N5.  Additional
+macro/label images will be created.  The default format is Zarr.  Additional
 metadata is written to a JSON file.  Be mindful of available disk space, as
 larger .isyntax files can result in >20 GB of tiles.
 
-Use of a n5 (the default) or zarr `--file_type` will result in losslessly
-compressed output.  These are the only formats that are currently
-supported by the downstream `raw2ometiff`.
+Use of the Zarr file type will result in losslessly compressed output.  This
+is the only format currently supported by the downstream `raw2ometiff` (as of
+version 0.3.0).
 
 ## Background color
 
