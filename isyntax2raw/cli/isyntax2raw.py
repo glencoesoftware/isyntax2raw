@@ -78,6 +78,7 @@ def write_tiles(
         wt.write_macro_image()
         wt.write_pyramid()
 
+
 @cli.command()
 @click.option(
     "--debug", is_flag=True,
@@ -96,7 +97,7 @@ def write_metadata(debug, input_path, output_path):
     )
     wm = WriteMetadata(input_path, output_path)
     wm.write_metadata()
-    
+
 
 def main():
     cli()

@@ -76,6 +76,7 @@ class MaxQueuePool(object):
     def __exit__(self, exception_type, exception_value, traceback):
         self.pool.__exit__(exception_type, exception_value, traceback)
 
+
 class IsyntaxRawWriter(object):
     def __init__(self, input_path):
         render_context = softwarerendercontext.SoftwareRenderContext()
@@ -129,9 +130,6 @@ class IsyntaxRawWriter(object):
         return v
 
 
-
-
-
 class WriteTiles(IsyntaxRawWriter):
 
     def __init__(
@@ -149,7 +147,6 @@ class WriteTiles(IsyntaxRawWriter):
         self.nested = nested
         self.input_path = input_path
         self.slide_directory = output_path
-
 
     def __enter__(self):
         return self
@@ -175,7 +172,6 @@ class WriteTiles(IsyntaxRawWriter):
             return self.pixel_engine.waitAny(regions)
         else:
             return self.pixel_engine.wait_any(regions)
-
 
     def write_label_image(self):
         '''write the label image (if present) as a JPEG file'''
@@ -665,11 +661,10 @@ class WriteMetadata(IsyntaxRawWriter):
 
             json.dump(metadata, f)
 
-
     def write_metadata(self):
         '''write metadata to a JSON file'''
         self.write_json_metadata()
-    
+
         ome_timestamp = self.acquisition_datetime()
 
         xml_values = {
@@ -705,6 +700,3 @@ class WriteMetadata(IsyntaxRawWriter):
         )
         with open(ome_xml_file, "w", encoding="utf-8") as omexml:
             omexml.write(xml)
-
-
-
