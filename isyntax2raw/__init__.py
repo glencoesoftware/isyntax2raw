@@ -172,8 +172,22 @@ class WriteTiles(object):
             "Software versions":
                 pe_in.software_versions,
             "Number of images":
-                self.num_images()
+                self.num_images(),
+            "Scanner Calibration Status":
+                pe_in.scanner_calibration_status,
+            "Scanner Operator Id":
+                pe_in.scanner_operator_id,
+            "Scanner Rack Number":
+                pe_in.scanner_rack_number,
+            "Scanner Rack Priority":
+                pe_in.scanner_rack_priority,
+            "Scanner Slot Number":
+                pe_in.scanner_slot_number,
+            "iSyntax File Version":
+                pe_in.isyntax_file_version,
+            # Could also add: 'is_UFS', 'is_UFSb', 'is_UVS', 'is_philips'
         }
+
 
     def get_image_metadata(self, image_no):
         if self.sdk_v1:
