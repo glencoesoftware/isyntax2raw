@@ -173,17 +173,17 @@ class WriteTiles(object):
                 pe_in.software_versions,
             "Number of images":
                 self.num_images(),
-            "Scanner Calibration Status":
+            "Scanner calibration status":
                 pe_in.scanner_calibration_status,
-            "Scanner Operator Id":
+            "Scanner operator ID":
                 pe_in.scanner_operator_id,
-            "Scanner Rack Number":
+            "Scanner rack number":
                 pe_in.scanner_rack_number,
-            "Scanner Rack Priority":
+            "Scanner rack priority":
                 pe_in.scanner_rack_priority,
-            "Scanner Slot Number":
+            "Scanner slot number":
                 pe_in.scanner_slot_number,
-            "iSyntax File Version":
+            "iSyntax file version":
                 pe_in.isyntax_file_version,
             # Could also add: 'is_UFS', 'is_UFSb', 'is_UVS', 'is_philips'
         }
