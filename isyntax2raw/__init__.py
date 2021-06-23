@@ -88,6 +88,252 @@ class IsyntaxRawWriter(object):
         self.pixel_engine["in"].open(input_path, "ficom")
         self.sdk_v1 = hasattr(self.pixel_engine["in"], "BARCODE")
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.pixel_engine["in"].close()
+
+    def get_metadata(self):
+        if self.sdk_v1:
+            return self.get_metadata_sdk_v1()
+        else:
+            return self.get_metadata_sdk_v2()
+
+    def get_metadata_sdk_v1(self):
+        pe_in = self.pixel_engine["in"]
+        return {
+            "Barcode":
+                self.barcode(),
+            "DICOM acquisition date":
+                self.acquisition_datetime().isoformat(),
+            "DICOM last calibration date":
+                pe_in.DICOM_DATE_OF_LAST_CALIBRATION,
+            "DICOM time of last calibration":
+                pe_in.DICOM_TIME_OF_LAST_CALIBRATION,
+            "DICOM manufacturer":
+            pe_in.DICOM_MANUFACTURER,
+            "DICOM manufacturer model name":
+                pe_in.DICOM_MANUFACTURERS_MODEL_NAME,
+            "DICOM device serial number":
+                pe_in.DICOM_DEVICE_SERIAL_NUMBER,
+            "Color space transform":
+                pe_in.colorspaceTransform(),
+            "Block size":
+                pe_in.blockSize(),
+            "Number of tiles":
+                pe_in.numTiles(),
+            "Bits stored":
+                pe_in.bitsStored(),
+            "Derivation description":
+                self.derivation_description(),
+            "DICOM software version":
+                pe_in.DICOM_SOFTWARE_VERSIONS,
+            "Number of images": self.num_images()
+        }
+
+    def get_metadata_sdk_v2(self):
+        pe_in = self.pixel_engine["in"]
+        return {
+            "Pixel engine version":
+                self.pixel_engine.version,
+            "Barcode":
+                self.barcode(),
+            "Acquisition datetime":
+                self.acquisition_datetime().isoformat(),
+            "Date of last calibration":
+                pe_in.date_of_last_calibration,
+            "Time of last calibration":
+                pe_in.time_of_last_calibration,
+            "Manufacturer":
+                pe_in.manufacturer,
+            "Model name":
+                pe_in.model_name,
+            "Device serial number":
+                pe_in.device_serial_number,
+            "Derivation description":
+                self.derivation_description(),
+            "Software versions":
+                pe_in.software_versions,
+            "Number of images":
+                self.num_images(),
+            "Scanner calibration status":
+                pe_in.scanner_calibration_status,
+            "Scanner operator ID":
+                pe_in.scanner_operator_id,
+            "Scanner rack number":
+                pe_in.scanner_rack_number,
+            "Scanner rack priority":
+                pe_in.scanner_rack_priority,
+            "Scanner slot number":
+                pe_in.scanner_slot_number,
+            "iSyntax file version":
+                pe_in.isyntax_file_version,
+            # Could also add: 'is_UFS', 'is_UFSb', 'is_UVS', 'is_philips'
+        }
+
+    def get_image_metadata(self, image_no):
+        if self.sdk_v1:
+            return self.get_image_metadata_sdk_v1(image_no)
+        else:
+            return self.get_image_metadata_sdk_v2(image_no)
+
+    def get_image_metadata_sdk_v1(self, image_no):
+        pe_in = self.pixel_engine["in"]
+        img = pe_in[image_no]
+        image_type = self.image_type(image_no)
+        image_metadata = {
+            "Image type":
+                image_type,
+            "DICOM lossy image compression method":
+                img.DICOM_LOSSY_IMAGE_COMPRESSION_METHOD,
+            "DICOM lossy image compression ratio":
+                img.DICOM_LOSSY_IMAGE_COMPRESSION_RATIO,
+            "DICOM derivation description":
+                img.DICOM_DERIVATION_DESCRIPTION,
+            "Image dimension names":
+                img.IMAGE_DIMENSION_NAMES,
+            "Image dimension types":
+                img.IMAGE_DIMENSION_TYPES,
+            "Image dimension units":
+                img.IMAGE_DIMENSION_UNITS,
+            "Image dimension ranges":
+                img.IMAGE_DIMENSION_RANGES,
+            "Image dimension discrete values":
+                img.IMAGE_DIMENSION_DISCRETE_VALUES_STRING,
+            "Image scale factor":
+                img.IMAGE_SCALE_FACTOR
+        }
+        if image_type == "WSI":
+            self.pixel_size_x = img.IMAGE_SCALE_FACTOR[0]
+            self.pixel_size_y = img.IMAGE_SCALE_FACTOR[1]
+
+            view = pe_in.SourceView()
+            image_metadata["Bits allocated"] = view.bitsAllocated()
+            image_metadata["Bits stored"] = view.bitsStored()
+            image_metadata["High bit"] = view.highBit()
+            image_metadata["Pixel representation"] = \
+                view.pixelRepresentation()
+            image_metadata["Planar configuration"] = \
+                view.planarConfiguration()
+            image_metadata["Samples per pixel"] = \
+                view.samplesPerPixel()
+            image_metadata["Number of levels"] = \
+                pe_in.numLevels()
+
+            for resolution in range(pe_in.numLevels()):
+                dim_ranges = view.dimensionRanges(resolution)
+                level_size_x = self.get_size(dim_ranges[0])
+                level_size_y = self.get_size(dim_ranges[1])
+                image_metadata["Level sizes #%s" % resolution] = {
+                    "X": level_size_x,
+                    "Y": level_size_y
+                }
+                if resolution == 0:
+                    self.size_x = level_size_x
+                    self.size_y = level_size_y
+        elif image_type == "LABELIMAGE":
+            self.label_x = self.get_size(img.IMAGE_DIMENSION_RANGES[0]) + 1
+            self.label_y = self.get_size(img.IMAGE_DIMENSION_RANGES[1]) + 1
+        elif image_type == "MACROIMAGE":
+            self.macro_x = self.get_size(img.IMAGE_DIMENSION_RANGES[0]) + 1
+            self.macro_y = self.get_size(img.IMAGE_DIMENSION_RANGES[1]) + 1
+        return image_metadata
+
+    def get_image_metadata_sdk_v2(self, image_no):
+        pe_in = self.pixel_engine["in"]
+        img = pe_in[image_no]
+        image_type = self.image_type(image_no)
+        view = img.source_view
+        image_scale_factor = view.scale
+        image_metadata = {
+            "Image type":
+                image_type,
+            "Lossy image compression method":
+                img.lossy_image_compression_method,
+            "Lossy image compression ratio":
+                img.lossy_image_compression_ratio,
+            "Image dimension names":
+                view.dimension_names,
+            "Image dimension types":
+                view.dimension_types,
+            "Image dimension units":
+                view.dimension_units,
+            "Image dimension discrete values":
+                view.dimension_discrete_values,
+            "Image scale factor":
+                image_scale_factor,
+            "Block size":
+                img.block_size(),
+        }
+        if image_type == "WSI":
+            image_metadata["Color space transform"] = \
+                img.colorspace_transform
+            image_metadata["Number of tiles"] = img.num_tiles
+
+            self.pixel_size_x = image_scale_factor[0]
+            self.pixel_size_y = image_scale_factor[1]
+
+            image_metadata["Bits allocated"] = view.bits_allocated
+            image_metadata["Bits stored"] = view.bits_stored
+            image_metadata["High bit"] = view.high_bit
+            image_metadata["Pixel representation"] = \
+                view.pixel_representation
+            image_metadata["Planar configuration"] = \
+                view.planar_configuration
+            image_metadata["Samples per pixel"] = \
+                view.samples_per_pixel
+            image_metadata["Number of derived levels"] = \
+                self.num_derived_levels(img)
+
+            for resolution in range(self.num_derived_levels(img)):
+                dim_ranges = self.dimension_ranges(img, resolution)
+                level_size_x = self.get_size(dim_ranges[0])
+                level_size_y = self.get_size(dim_ranges[1])
+                image_metadata["Level sizes #%s" % resolution] = {
+                    "X": level_size_x,
+                    "Y": level_size_y
+                }
+                if resolution == 0:
+                    self.size_x = level_size_x
+                    self.size_y = level_size_y
+        elif image_type == "LABELIMAGE":
+            self.label_x = self.get_size(view.dimension_ranges(0)[0]) + 1
+            self.label_y = self.get_size(view.dimension_ranges(0)[1]) + 1
+        elif image_type == "MACROIMAGE":
+            self.macro_x = self.get_size(view.dimension_ranges(0)[0]) + 1
+            self.macro_y = self.get_size(view.dimension_ranges(0)[1]) + 1
+        return image_metadata
+
+    def acquisition_datetime(self):
+        pe_in = self.pixel_engine["in"]
+        if self.sdk_v1:
+            timestamp = str(pe_in.DICOM_ACQUISITION_DATETIME)
+        else:
+            timestamp = pe_in.acquisition_datetime
+        return datetime.strptime(timestamp, "%Y%m%d%H%M%S.%f")
+
+    def barcode(self):
+        pe_in = self.pixel_engine["in"]
+        if self.sdk_v1:
+            return pe_in.BARCODE
+        else:
+            return pe_in.barcode
+
+    def data_envelopes(self, image, resolution):
+        pe_in = self.pixel_engine["in"]
+        if self.sdk_v1:
+            return pe_in.SourceView().dataEnvelopes(resolution)
+        else:
+            return image.source_view.data_envelopes(resolution)
+
+    def derivation_description(self):
+        pe_in = self.pixel_engine["in"]
+        if self.sdk_v1:
+            return pe_in.DICOM_DERIVATION_DESCRIPTION
+        else:
+            return pe_in.derivation_description
+
     def dimension_ranges(self, image, resolution):
         pe_in = self.pixel_engine["in"]
         if self.sdk_v1:
