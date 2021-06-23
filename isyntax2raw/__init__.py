@@ -188,7 +188,6 @@ class WriteTiles(object):
             # Could also add: 'is_UFS', 'is_UFSb', 'is_UVS', 'is_philips'
         }
 
-
     def get_image_metadata(self, image_no):
         if self.sdk_v1:
             return self.get_image_metadata_sdk_v1(image_no)
