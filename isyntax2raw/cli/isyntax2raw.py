@@ -18,7 +18,7 @@ def cli():
     pass
 
 
-@click.command()
+@cli.command(name='write_tiles')
 @click.option(
     "--tile_width", default=512, type=int, show_default=True,
     help="tile width in pixels"
@@ -77,7 +77,19 @@ def write_tiles(
         wt.write_pyramid()
 
 
-cli.add_command(write_tiles, name='write_tiles')
+@cli.command(name='write_metadata')
+@click.option(
+    "--debug", is_flag=True,
+    help="enable debugging",
+)
+@click.argument('input_path')
+@click.argument('output_path')
+def write_metadata(debug, input_path, output_path):
+    with WriteTiles(
+        None, None, None, None,
+        None, None, None, input_path, output_path
+    ) as wt:
+        wt.write_metadata_json()
 
 
 def main():
