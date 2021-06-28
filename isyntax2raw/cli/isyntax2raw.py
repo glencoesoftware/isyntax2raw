@@ -83,13 +83,13 @@ def write_tiles(
     help="enable debugging",
 )
 @click.argument('input_path')
-@click.argument('output_path')
-def write_metadata(debug, input_path, output_path):
+@click.argument('output_file')
+def write_metadata(debug, input_path, output_file):
     with WriteTiles(
         None, None, None, None,
-        None, None, None, input_path, output_path
+        None, None, None, input_path, output_file
     ) as wt:
-        wt.write_metadata_json()
+        wt.write_metadata_json_cli()
 
 
 def main():
