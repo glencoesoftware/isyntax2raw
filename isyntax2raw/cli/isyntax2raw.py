@@ -13,12 +13,23 @@ import logging
 from .. import WriteTiles
 
 
+def setup_logging(debug):
+    level = logging.INFO
+    if debug:
+        level = logging.DEBUG
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)-7s [%(name)16s] "
+               "(%(thread)10s) %(message)s"
+    )
+
+
 @click.group()
 def cli():
     pass
 
 
-@click.command()
+@cli.command(name='write_tiles')
 @click.option(
     "--tile_width", default=512, type=int, show_default=True,
     help="tile width in pixels"
@@ -59,14 +70,7 @@ def write_tiles(
     tile_width, tile_height, resolutions, max_workers, batch_size,
     fill_color, nested, debug, input_path, output_path
 ):
-    level = logging.INFO
-    if debug:
-        level = logging.DEBUG
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s %(levelname)-7s [%(name)16s] "
-               "(%(thread)10s) %(message)s"
-    )
+    setup_logging(debug)
     with WriteTiles(
         tile_width, tile_height, resolutions, max_workers,
         batch_size, fill_color, nested, input_path, output_path
@@ -77,7 +81,20 @@ def write_tiles(
         wt.write_pyramid()
 
 
-cli.add_command(write_tiles, name='write_tiles')
+@cli.command(name='write_metadata')
+@click.option(
+    "--debug", is_flag=True,
+    help="enable debugging",
+)
+@click.argument('input_path')
+@click.argument('output_file')
+def write_metadata(debug, input_path, output_file):
+    setup_logging(debug)
+    with WriteTiles(
+        None, None, None, None,
+        None, None, None, input_path, None
+    ) as wt:
+        wt.write_metadata_json(output_file)
 
 
 def main():
