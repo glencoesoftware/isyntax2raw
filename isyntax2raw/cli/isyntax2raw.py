@@ -87,9 +87,9 @@ def write_tiles(
 def write_metadata(debug, input_path, output_file):
     with WriteTiles(
         None, None, None, None,
-        None, None, None, input_path, output_file
+        None, None, None, input_path, None
     ) as wt:
-        wt.write_metadata_json_cli()
+        wt.write_metadata_json(output_file)
 
 
 def main():

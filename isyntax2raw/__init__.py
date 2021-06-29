@@ -375,13 +375,10 @@ class WriteTiles(object):
         else:
             return self.pixel_engine.wait_any(regions)
 
-    def write_metadata_json_cli(self):
-        self.write_metadata_json(self.slide_directory)
-
-    def write_metadata_json(self, output_file_path):
+    def write_metadata_json(self, metadata_file):
         '''write metadata to a JSON file'''
 
-        with open(output_file_path, "w", encoding="utf-8") as f:
+        with open(metadata_file, "w", encoding="utf-8") as f:
             metadata = self.get_metadata()
 
             for image in range(self.num_images()):
@@ -390,7 +387,7 @@ class WriteTiles(object):
 
             json.dump(metadata, f)
 
-    def write_metadata_xml(self):
+    def write_metadata_xml(self, metadata_file):
         ome_timestamp = self.acquisition_datetime()
 
         xml_values = {
@@ -421,20 +418,21 @@ class WriteTiles(object):
         loader = PackageLoader()
         template = loader.import_("isyntax2raw.resources.ome_template")
         xml = template(xml_values).render()
-        ome_xml_file = os.path.join(
-            self.slide_directory, "OME", "METADATA.ome.xml"
-        )
-        with open(ome_xml_file, "w", encoding="utf-8") as omexml:
+        with open(metadata_file, "w", encoding="utf-8") as omexml:
             omexml.write(xml)
 
     def write_metadata(self):
         os.makedirs(os.path.join(self.slide_directory, "OME"), exist_ok=True)
+
         metadata_file = os.path.join(
             self.slide_directory, "OME", "METADATA.json"
         )
-
         self.write_metadata_json(metadata_file)
-        self.write_metadata_xml()
+
+        metadata_file = os.path.join(
+            self.slide_directory, "OME", "METADATA.ome.xml"
+        )
+        self.write_metadata_xml(metadata_file)
 
     def get_size(self, dim_range):
         '''calculate the length in pixels of a dimension'''
