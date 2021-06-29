@@ -13,6 +13,17 @@ import logging
 from .. import WriteTiles
 
 
+def setup_logging(debug):
+    level = logging.INFO
+    if debug:
+        level = logging.DEBUG
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)-7s [%(name)16s] "
+               "(%(thread)10s) %(message)s"
+    )
+
+
 @click.group()
 def cli():
     pass
@@ -59,14 +70,7 @@ def write_tiles(
     tile_width, tile_height, resolutions, max_workers, batch_size,
     fill_color, nested, debug, input_path, output_path
 ):
-    level = logging.INFO
-    if debug:
-        level = logging.DEBUG
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s %(levelname)-7s [%(name)16s] "
-               "(%(thread)10s) %(message)s"
-    )
+    setup_logging(debug)
     with WriteTiles(
         tile_width, tile_height, resolutions, max_workers,
         batch_size, fill_color, nested, input_path, output_path
@@ -85,6 +89,7 @@ def write_tiles(
 @click.argument('input_path')
 @click.argument('output_file')
 def write_metadata(debug, input_path, output_file):
+    setup_logging(debug)
     with WriteTiles(
         None, None, None, None,
         None, None, None, input_path, None
