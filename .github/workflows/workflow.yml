@@ -36,7 +36,7 @@ jobs:
       - name: Run tests
         run: |
             # actions/checkout#206
-            git fetch --prune --unshallow --tags
+            git fetch --prune --unshallow --tags --force
             git describe
             flake8
             python setup.py build
@@ -55,7 +55,7 @@ jobs:
       - name: Build package
         run: |
           # actions/checkout#206
-          git fetch --prune --unshallow --tags
+          git fetch --prune --unshallow --tags --force
           python -mpip install wheel
           python setup.py sdist bdist_wheel
       - name: Publish to PyPI
