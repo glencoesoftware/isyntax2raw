@@ -35,6 +35,9 @@ jobs:
         run: python -mpip install -U wheel flake8 virtualenv
       - name: Run tests
         run: |
+            # actions/checkout#206
+            git fetch --prune --unshallow --tags
+            git describe
             flake8
             python setup.py build
 
