@@ -48,6 +48,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          # Fetch all history for all barnches and tags.  Essential
+          # for how we handle versioning.
+          fetch-depth: 0
       - uses: actions/setup-python@v2
       - name: Build package
         run: |
