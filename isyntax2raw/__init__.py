@@ -19,6 +19,8 @@ import softwarerendercontext
 import softwarerenderbackend
 import zarr
 
+from register_j2k import j2k
+
 from datetime import datetime
 from concurrent.futures import ALL_COMPLETED, ThreadPoolExecutor, wait
 from threading import BoundedSemaphore
@@ -516,7 +518,8 @@ class WriteTiles(object):
         self.zarr_group.create_dataset(
             "%s/%s" % (str(series), str(resolution)),
             shape=(1, 1, 3, height, width),
-            chunks=(1, 1, 1, self.tile_height, self.tile_width), dtype='B'
+            chunks=(1, 1, 1, self.tile_height, self.tile_width), dtype='B',
+            compressor=j2k(psnr=45)
         )
 
     def make_planar(self, pixels, tile_width, tile_height):
