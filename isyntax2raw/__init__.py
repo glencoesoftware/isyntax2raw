@@ -88,7 +88,7 @@ class WriteTiles(object):
 
     def __init__(
         self, tile_width, tile_height, resolutions, max_workers,
-        batch_size, fill_color, nested, input_path, output_path
+        batch_size, fill_color, nested, input_path, output_path, psnr
     ):
         self.tile_width = tile_width
         self.tile_height = tile_height
@@ -99,6 +99,7 @@ class WriteTiles(object):
         self.nested = nested
         self.input_path = input_path
         self.slide_directory = output_path
+        self.psnr = psnr
 
         render_context = softwarerendercontext.SoftwareRenderContext()
         render_backend = softwarerenderbackend.SoftwareRenderBackend()
@@ -524,7 +525,7 @@ class WriteTiles(object):
             "%s/%s" % (str(series), str(resolution)),
             shape=(1, 1, 3, height, width),
             chunks=(1, 1, 1, self.tile_height, self.tile_width), dtype='B',
-            compressor=j2k(psnr=45)
+            compressor=j2k(self.psnr)
         )
 
     def make_planar(self, pixels, tile_width, tile_height):
@@ -732,10 +733,11 @@ class j2k(Codec):
         super().__init__()
 
     def encode(self, buf):
+        buf = np.squeeze(buf)
         bufa = ensure_ndarray(buf)
         tmp = tempfile.NamedTemporaryFile()
         buff = glymur.Jp2k(tmp.name, shape=bufa.shape)
-        buff._write(bufa, psnr=[30], numres=1)
+        buff._write(bufa, psnr=[self.psnr], numres=1)
         f = open(tmp.name, 'rb')
         array = f.read()
         return array
@@ -750,6 +752,7 @@ class j2k(Codec):
         jp2 = glymur.Jp2k(tmp.name)
         fullres = jp2[:]
         tiled = fullres
+        print('Decoded Array Shape:',tiled.shape)
         return ndarray_copy(tiled, out)
 
 register_codec(j2k)

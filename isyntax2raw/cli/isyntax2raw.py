@@ -64,16 +64,20 @@ def cli():
     "--debug", is_flag=True,
     help="enable debugging",
 )
+@click.option(
+    "--psnr", default=50, show_default=True,
+    help="JPEG-2000 compression PSNR"
+)
 @click.argument("input_path")
 @click.argument("output_path")
 def write_tiles(
     tile_width, tile_height, resolutions, max_workers, batch_size,
-    fill_color, nested, debug, input_path, output_path
+    fill_color, nested, debug, input_path, output_path, psnr
 ):
     setup_logging(debug)
     with WriteTiles(
         tile_width, tile_height, resolutions, max_workers,
-        batch_size, fill_color, nested, input_path, output_path
+        batch_size, fill_color, nested, input_path, output_path, psnr
     ) as wt:
         wt.write_metadata()
         wt.write_label_image()
