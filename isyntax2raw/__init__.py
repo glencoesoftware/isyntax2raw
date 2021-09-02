@@ -752,7 +752,7 @@ class j2k(Codec):
         jp2 = glymur.Jp2k(tmp.name)
         fullres = jp2[:]
         tiled = fullres
-        print('Decoded Array Shape:',tiled.shape)
         return ndarray_copy(tiled, out)
+
 
 register_codec(j2k)
