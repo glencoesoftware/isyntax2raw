@@ -388,6 +388,18 @@ class WriteTiles(object):
         else:
             return self.pixel_engine.wait_any(regions)
 
+    def write_image_metadata(self, resolutions, series):
+        multiscales = [{
+            'metadata': {
+                'method': 'pixelengine',
+                'version': str(self.pixel_engine.version)
+            },
+            'version': '0.2',
+            'datasets': [{'path': str(v)} for v in resolutions]
+        }]
+        z = self.zarr_group["%d" % series]
+        z.attrs['multiscales'] = multiscales
+
     def write_metadata_json(self, metadata_file):
         '''write metadata to a JSON file'''
 
@@ -494,6 +506,7 @@ class WriteTiles(object):
                 band = np.array(img.getdata(band=channel))
                 band.shape = (height, width)
                 tile[0, channel, 0] = band
+            self.write_image_metadata(range(1), series)
 
             log.info("wrote %s image" % image_type)
 
@@ -656,6 +669,7 @@ class WriteTiles(object):
                                 x_start, y_start, width, height
                             ))
             wait(jobs, return_when=ALL_COMPLETED)
+            self.write_image_metadata(resolutions, 0)
 
     def create_patch_list(
         self, dim_ranges, tiles, tile_size, tile_directory
