@@ -12,6 +12,7 @@ import json
 import logging
 import math
 import os
+import threading
 
 import numpy as np
 import pixelengine
@@ -21,7 +22,6 @@ import zarr
 
 from numcodecs.abc import Codec
 from numcodecs.compat import ensure_ndarray, ensure_bytes
-from numcodecs.compat import ndarray_copy
 from numcodecs.registry import register_codec
 import glymur
 import tempfile
@@ -536,14 +536,9 @@ class WriteTiles(object):
         # ordering is TCZYX and hard-coded since Z and T are not present
         self.zarr_group.create_dataset(
             "%s/%s" % (str(series), str(resolution)),
-<<<<<<< HEAD
-            shape=(1, 1, 3, height, width),
+            shape=(1, 3, 1, height, width),
             chunks=(1, 1, 1, self.tile_height, self.tile_width), dtype='B',
             compressor=j2k(self.psnr)
-=======
-            shape=(1, 3, 1, height, width),
-            chunks=(1, 1, 1, self.tile_height, self.tile_width), dtype='B'
->>>>>>> ome-ngff-v2
         )
 
     def make_planar(self, pixels, tile_width, tile_height):
@@ -752,26 +747,31 @@ class j2k(Codec):
         super().__init__()
 
     def encode(self, buf):
-        buf = np.squeeze(buf)
-        bufa = ensure_ndarray(buf)
-        tmp = tempfile.NamedTemporaryFile()
-        buff = glymur.Jp2k(tmp.name, shape=bufa.shape)
-        buff._write(bufa, psnr=[self.psnr], numres=1)
-        f = open(tmp.name, 'rb')
-        array = f.read()
+        print("Locking")
+        with lock:
+            print("Locked")
+            buf = np.squeeze(buf)
+            bufa = ensure_ndarray(buf)
+            tmp = tempfile.NamedTemporaryFile()
+            buff = glymur.Jp2k(tmp.name, shape=bufa.shape)
+            buff._write(bufa, psnr=[self.psnr], numres=1)
+            f = open(tmp.name, 'rb')
+            array = f.read()
         return array
 
     def decode(self, buf, out=None):
-        buf = ensure_bytes(buf)
-        if out is not None:
-            out = ensure_bytes(out)
-        tmp = tempfile.NamedTemporaryFile(delete=False)
-        with open(tmp.name, "wb") as fb:
-            fb.write(buf)
-        jp2 = glymur.Jp2k(tmp.name)
-        fullres = jp2[:]
-        tiled = fullres
-        return ndarray_copy(tiled, out)
+        with lock:
+            buf = ensure_bytes(buf)
+            if out is not None:
+                out = ensure_bytes(out)
+            tmp = tempfile.NamedTemporaryFile()
+            with open(tmp.name, "wb") as fb:
+                fb.write(buf)
+            jp2 = glymur.Jp2k(tmp.name)
+            fullres = jp2[:]
+            tiled = fullres
+        return tiled
 
 
+lock = threading.Lock()
 register_codec(j2k)
