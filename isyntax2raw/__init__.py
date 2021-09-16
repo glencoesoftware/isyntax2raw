@@ -21,7 +21,11 @@ import softwarerenderbackend
 import zarr
 
 from numcodecs.abc import Codec
-from numcodecs.compat import ensure_ndarray, ensure_bytes
+from numcodecs.compat import \
+    ensure_bytes, \
+    ensure_contiguous_ndarray, \
+    ensure_ndarray, \
+    ndarray_copy
 from numcodecs.registry import register_codec
 import glymur
 import tempfile
@@ -747,30 +751,36 @@ class j2k(Codec):
         super().__init__()
 
     def encode(self, buf):
-        print("Locking")
-        with lock:
-            print("Locked")
-            buf = np.squeeze(buf)
-            bufa = ensure_ndarray(buf)
-            tmp = tempfile.NamedTemporaryFile()
-            buff = glymur.Jp2k(tmp.name, shape=bufa.shape)
-            buff._write(bufa, psnr=[self.psnr], numres=1)
-            f = open(tmp.name, 'rb')
-            array = f.read()
+        buf = ensure_ndarray(np.squeeze(buf))
+        fd, fname = tempfile.mkstemp()
+        try:
+            buff = glymur.Jp2k(
+                fname, psnr=[self.psnr], shape=buf.shape, numres=1
+            )
+            buff._write(buf)
+            with open(fname, 'rb') as f:
+                array = f.read()
+        finally:
+            os.close(fd)
+            os.remove(fname)
         return array
 
     def decode(self, buf, out=None):
-        with lock:
+        fd, fname = tempfile.mkstemp()
+        try:
+            with open(fname, 'wb') as f:
+                f.write(buf)
             buf = ensure_bytes(buf)
+            jp2 = glymur.Jp2k(fname)
             if out is not None:
-                out = ensure_bytes(out)
-            tmp = tempfile.NamedTemporaryFile()
-            with open(tmp.name, "wb") as fb:
-                fb.write(buf)
-            jp2 = glymur.Jp2k(tmp.name)
-            fullres = jp2[:]
-            tiled = fullres
-        return tiled
+                out_view = ensure_contiguous_ndarray(out)
+                ndarray_copy(jp2[:], out_view)
+            else:
+                out = jp2[:]
+            return out
+        finally:
+            os.close(fd)
+            os.remove(fname)
 
 
 lock = threading.Lock()
