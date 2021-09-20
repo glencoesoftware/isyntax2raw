@@ -515,9 +515,9 @@ class WriteTiles(object):
             tile = self.zarr_group["%d/0" % series]
             tile.attrs['image type'] = image_type
             for channel in range(0, 3):
-                band = np.array(img.getdata(band=channel))
-                band.shape = (height, width)
-                tile[0, channel, 0] = band
+                data = np.array(img.getdata())
+                data.shape = (height, width, 3)
+                tile[0, 0, :] = data
             self.write_image_metadata(range(1), series)
 
             log.info("wrote %s image" % image_type)
@@ -537,21 +537,14 @@ class WriteTiles(object):
 
         # important to explicitly set the chunk size to 1 for non-XY dims
         # setting to None may cause all planes to be chunked together
-        # ordering is TCZYX and hard-coded since Z and T are not present
+        # ordering is TZYXC (interleaved) and hard-coded since Z and T
+        # are not present
         self.zarr_group.create_dataset(
             "%s/%s" % (str(series), str(resolution)),
-            shape=(1, 3, 1, height, width),
-            chunks=(1, 1, 1, self.tile_height, self.tile_width), dtype='B',
+            shape=(1, 1, height, width, 3),
+            chunks=(1, 1, self.tile_height, self.tile_width, 3), dtype='B',
             compressor=j2k(self.psnr)
         )
-
-    def make_planar(self, pixels, tile_width, tile_height):
-        r = pixels[0::3]
-        g = pixels[1::3]
-        b = pixels[2::3]
-        for v in (r, g, b):
-            v.shape = (tile_height, tile_width)
-        return np.array([r, g, b])
 
     def write_pyramid(self):
         '''write the slide's pyramid as a set of tiles'''
@@ -573,11 +566,9 @@ class WriteTiles(object):
             x_end = x_start + tile_width
             y_end = y_start + tile_height
             try:
-                # Zarr has a single n-dimensional array representation on
-                # disk (not interleaved RGB)
-                pixels = self.make_planar(pixels, tile_width, tile_height)
+                pixels.shape = (tile_height, tile_width, 3)
                 z = self.zarr_group["0/%d" % resolution]
-                z[0, :, 0, y_start:y_end, x_start:x_end] = pixels
+                z[0, 0, y_start:y_end, x_start:x_end, :] = pixels
             except Exception:
                 log.error(
                     "Failed to write tile [:, %d:%d, %d:%d]" % (

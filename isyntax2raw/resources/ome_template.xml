@@ -8,7 +8,7 @@
     <InstrumentRef ID="Instrument:0"/>
     <ObjectiveSettings ID="Objective:0:0"/>
     <Pixels BigEndian="false" DimensionOrder="XYZCT" ID="Pixels:0"
-            Interleaved="false"
+            Interleaved="true"
             PhysicalSizeX="${image['pixels']['physicalSizeX']}"
             PhysicalSizeXUnit="µm"
             PhysicalSizeY="${image['pixels']['physicalSizeY']}"
@@ -28,7 +28,7 @@
     <InstrumentRef ID="Instrument:0"/>
     <ObjectiveSettings ID="Objective:0:0"/>
     <Pixels BigEndian="false" DimensionOrder="XYZCT" ID="Pixels:1"
-            Interleaved="false" SignificantBits="8" SizeC="3"
+            Interleaved="true" SignificantBits="8" SizeC="3"
             SizeT="1" SizeX="${label['pixels']['sizeX']}" SizeY="${label['pixels']['sizeY']}"
             SizeZ="1" Type="uint8">
       <Channel ID="Channel:1:0" SamplesPerPixel="3">
@@ -42,7 +42,7 @@
     <InstrumentRef ID="Instrument:0"/>
     <ObjectiveSettings ID="Objective:0:0"/>
     <Pixels BigEndian="false" DimensionOrder="XYZCT" ID="Pixels:2"
-            Interleaved="false" SignificantBits="8" SizeC="3"
+            Interleaved="true" SignificantBits="8" SizeC="3"
             SizeT="1"
             SizeX="${macro['pixels']['sizeX']}"
             SizeY="${macro['pixels']['sizeY']}"
