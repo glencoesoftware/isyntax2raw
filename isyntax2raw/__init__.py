@@ -27,7 +27,7 @@ from numcodecs.compat import \
     ensure_ndarray, \
     ndarray_copy
 from numcodecs.registry import register_codec
-import glymur
+import imagecodecs
 import tempfile
 
 from datetime import datetime
@@ -735,7 +735,7 @@ class WriteTiles(object):
 
 
 class j2k(Codec):
-    """Codec providing j2k compression via Glymur.
+    """Codec providing j2k compression via imagecodecs.
     Parameters
     ----------
     psnr : int
@@ -751,36 +751,17 @@ class j2k(Codec):
         super().__init__()
 
     def encode(self, buf):
-        buf = ensure_ndarray(np.squeeze(buf))
-        fd, fname = tempfile.mkstemp()
-        try:
-            buff = glymur.Jp2k(
-                fname, psnr=[self.psnr], shape=buf.shape, numres=1
-            )
-            buff._write(buf)
-            with open(fname, 'rb') as f:
-                array = f.read()
-        finally:
-            os.close(fd)
-            os.remove(fname)
-        return array
+        return imagecodecs.jpeg2k_encode(np.squeeze(buf), level=self.psnr)
 
     def decode(self, buf, out=None):
-        fd, fname = tempfile.mkstemp()
-        try:
-            with open(fname, 'wb') as f:
-                f.write(buf)
             buf = ensure_bytes(buf)
-            jp2 = glymur.Jp2k(fname)
+            decoded = imagecodecs.jpeg2k_decode(buf)
             if out is not None:
                 out_view = ensure_contiguous_ndarray(out)
-                ndarray_copy(jp2[:], out_view)
+                ndarray_copy(decoded, out_view)
             else:
-                out = jp2[:]
+                out = decoded
             return out
-        finally:
-            os.close(fd)
-            os.remove(fname)
 
 
 lock = threading.Lock()
