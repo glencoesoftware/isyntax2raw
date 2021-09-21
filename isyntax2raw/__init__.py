@@ -12,7 +12,6 @@ import json
 import logging
 import math
 import os
-import threading
 
 import numpy as np
 import pixelengine
@@ -28,7 +27,6 @@ from numcodecs.compat import \
     ndarray_copy
 from numcodecs.registry import register_codec
 import imagecodecs
-import tempfile
 
 from datetime import datetime
 from concurrent.futures import ALL_COMPLETED, ThreadPoolExecutor, wait
@@ -755,5 +753,4 @@ class j2k(Codec):
             return out
 
 
-lock = threading.Lock()
 register_codec(j2k)
