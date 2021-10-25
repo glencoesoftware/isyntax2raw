@@ -23,7 +23,6 @@ from numcodecs.abc import Codec
 from numcodecs.compat import \
     ensure_bytes, \
     ensure_contiguous_ndarray, \
-    ensure_ndarray, \
     ndarray_copy
 from numcodecs.registry import register_codec
 import imagecodecs
@@ -743,14 +742,14 @@ class j2k(Codec):
         return imagecodecs.jpeg2k_encode(np.squeeze(buf), level=self.psnr)
 
     def decode(self, buf, out=None):
-            buf = ensure_bytes(buf)
-            decoded = imagecodecs.jpeg2k_decode(buf)
-            if out is not None:
-                out_view = ensure_contiguous_ndarray(out)
-                ndarray_copy(decoded, out_view)
-            else:
-                out = decoded
-            return out
+        buf = ensure_bytes(buf)
+        decoded = imagecodecs.jpeg2k_decode(buf)
+        if out is not None:
+            out_view = ensure_contiguous_ndarray(out)
+            ndarray_copy(decoded, out_view)
+        else:
+            out = decoded
+        return out
 
 
 register_codec(j2k)
