@@ -7,6 +7,7 @@ install:
 
 build_script:
   - pip3 install --user -U pip setuptools wheel flake8
+  - export PATH="$(python3 -m site --user-base)/bin:${PATH}"
   - python3 setup.py build
 
 test_script:
