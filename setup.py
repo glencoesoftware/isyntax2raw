@@ -62,7 +62,7 @@ def read(fname):
 
 setup(name='isyntax2raw',
       version=version.getVersion(),
-      python_requires='>=3.6',
+      python_requires='>=3.7',
       description='iSyntax to raw format converter',
       long_description=read('README.md'),
       long_description_content_type='text/markdown',
