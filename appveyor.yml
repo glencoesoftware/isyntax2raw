@@ -6,11 +6,11 @@ install:
   - sudo apt-get install -y python3-pip
 
 build_script:
-  - pip3 install --user -U pip setuptools wheel
+  - pip3 install --user -U pip setuptools wheel flake8
   - python3 setup.py build
 
 test_script:
-  - python3 setup.py flake8
+  - flake8 .
 
 after_test:
   - python3 setup.py bdist_wheel bdist_egg
