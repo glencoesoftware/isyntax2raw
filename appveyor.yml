@@ -1,11 +1,9 @@
 image: ubuntu1804
 
-install:
-  - sudo apt-get install -y python3-setuptools python3-wheel twine
-
 build: off
 
 build_script:
+  - pip install --user -U setuptools wheel
   - python3 setup.py build
 
 test_script:
