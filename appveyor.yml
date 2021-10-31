@@ -1,18 +1,20 @@
 image: ubuntu1804
 
-install:
-  - sudo apt-get install -y python3-setuptools python3-wheel twine
-
 build: off
 
+install:
+  - sudo apt-get install -y python3-pip
+
 build_script:
+  - pip3 install --user -U pip setuptools wheel flake8
+  - export PATH="$(python3 -m site --user-base)/bin:${PATH}"
   - python3 setup.py build
 
 test_script:
-  - python3 setup.py flake8
+  - flake8 .
 
 after_test:
-  - python3 setup.py bdist_wheel bdist_egg
+  - python3 setup.py bdist_wheel
 
 artifacts:
   - path: dist/*
