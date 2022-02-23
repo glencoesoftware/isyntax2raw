@@ -19,6 +19,14 @@ import softwarerendercontext
 import softwarerenderbackend
 import zarr
 
+from numcodecs.abc import Codec
+from numcodecs.compat import \
+    ensure_bytes, \
+    ensure_contiguous_ndarray, \
+    ndarray_copy
+from numcodecs.registry import register_codec
+import imagecodecs
+
 from datetime import datetime
 from concurrent.futures import ALL_COMPLETED, ThreadPoolExecutor, wait
 from threading import BoundedSemaphore
@@ -81,7 +89,7 @@ class WriteTiles(object):
 
     def __init__(
         self, tile_width, tile_height, resolutions, max_workers,
-        batch_size, fill_color, nested, input_path, output_path
+        batch_size, fill_color, nested, input_path, output_path, psnr
     ):
         self.tile_width = tile_width
         self.tile_height = tile_height
@@ -92,6 +100,7 @@ class WriteTiles(object):
         self.nested = nested
         self.input_path = input_path
         self.slide_directory = output_path
+        self.psnr = psnr
 
         render_context = softwarerendercontext.SoftwareRenderContext()
         render_backend = softwarerenderbackend.SoftwareRenderBackend()
@@ -503,9 +512,9 @@ class WriteTiles(object):
             tile = self.zarr_group["%d/0" % series]
             tile.attrs['image type'] = image_type
             for channel in range(0, 3):
-                band = np.array(img.getdata(band=channel))
-                band.shape = (height, width)
-                tile[0, channel, 0] = band
+                data = np.array(img.getdata())
+                data.shape = (height, width, 3)
+                tile[0, 0, :] = data
             self.write_image_metadata(range(1), series)
 
             log.info("wrote %s image" % image_type)
@@ -525,20 +534,14 @@ class WriteTiles(object):
 
         # important to explicitly set the chunk size to 1 for non-XY dims
         # setting to None may cause all planes to be chunked together
-        # ordering is TCZYX and hard-coded since Z and T are not present
+        # ordering is TZYXC (interleaved) and hard-coded since Z and T
+        # are not present
         self.zarr_group.create_dataset(
             "%s/%s" % (str(series), str(resolution)),
-            shape=(1, 3, 1, height, width),
-            chunks=(1, 1, 1, self.tile_height, self.tile_width), dtype='B'
+            shape=(1, 1, height, width, 3),
+            chunks=(1, 1, self.tile_height, self.tile_width, 3), dtype='B',
+            compressor=j2k(self.psnr)
         )
-
-    def make_planar(self, pixels, tile_width, tile_height):
-        r = pixels[0::3]
-        g = pixels[1::3]
-        b = pixels[2::3]
-        for v in (r, g, b):
-            v.shape = (tile_height, tile_width)
-        return np.array([r, g, b])
 
     def write_pyramid(self):
         '''write the slide's pyramid as a set of tiles'''
@@ -560,11 +563,9 @@ class WriteTiles(object):
             x_end = x_start + tile_width
             y_end = y_start + tile_height
             try:
-                # Zarr has a single n-dimensional array representation on
-                # disk (not interleaved RGB)
-                pixels = self.make_planar(pixels, tile_width, tile_height)
+                pixels.shape = (tile_height, tile_width, 3)
                 z = self.zarr_group["0/%d" % resolution]
-                z[0, :, 0, y_start:y_end, x_start:x_end] = pixels
+                z[0, 0, y_start:y_end, x_start:x_end, :] = pixels
             except Exception:
                 log.error(
                     "Failed to write tile [:, %d:%d, %d:%d]" % (
@@ -719,3 +720,36 @@ class WriteTiles(object):
                 # order to identify the patches returned asynchronously
                 patch_ids.append((x, y))
         return patches, patch_ids
+
+
+class j2k(Codec):
+    """Codec providing j2k compression via imagecodecs.
+    Parameters
+    ----------
+    psnr : int
+        Compression peak signal noise ratio.
+    """
+
+    codec_id = "j2k"
+
+    def __init__(self, psnr=50):
+        self.psnr = psnr
+        assert (self.psnr > 0 and self.psnr <= 100
+                and isinstance(self.psnr, int))
+        super().__init__()
+
+    def encode(self, buf):
+        return imagecodecs.jpeg2k_encode(np.squeeze(buf), level=self.psnr)
+
+    def decode(self, buf, out=None):
+        buf = ensure_bytes(buf)
+        decoded = imagecodecs.jpeg2k_decode(buf)
+        if out is not None:
+            out_view = ensure_contiguous_ndarray(out)
+            ndarray_copy(decoded, out_view)
+        else:
+            out = decoded
+        return out
+
+
+register_codec(j2k)
