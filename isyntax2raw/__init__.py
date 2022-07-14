@@ -405,7 +405,7 @@ class WriteTiles(object):
 
         metadata = self.get_image_metadata(0)
         scale_level = [
-          metadata['Level sizes #0']['X'] / metadata['Level sizes #%s' % v]['X']
+          self.size_x / metadata['Level sizes #%s' % v]['X']
           for v in resolutions]
 
         pixel_size_x = self.pixel_size_x if series == 0 else 1.0
@@ -420,11 +420,12 @@ class WriteTiles(object):
             'version': '0.4',
             'datasets': [{
                 'path': str(v),
-                'coordinateTransformations' : [ {
-                    'scale' : [ 1.0, 1.0, 1.0,
+                'coordinateTransformations': [{
+                    'scale': [
+                        1.0, 1.0, 1.0,
                         pixel_size_y * scale_level[v],
                         pixel_size_x * scale_level[v]],
-                    'type' : 'scale'
+                    'type': 'scale'
                 }]
             } for v in resolutions]
         }]
