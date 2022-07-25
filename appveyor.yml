@@ -3,6 +3,7 @@ image: ubuntu1804
 build: off
 
 install:
+  - sudo apt-get update
   - sudo apt-get install -y python3-pip
 
 build_script:
