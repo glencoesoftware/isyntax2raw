@@ -389,13 +389,45 @@ class WriteTiles(object):
             return self.pixel_engine.wait_any(regions)
 
     def write_image_metadata(self, resolutions, series):
+        # OK to hard-code axes; this matches DimensionOrder in ome_template.xml
+        axes = {
+          't': 'time',
+          'c': 'channel',
+          'z': 'space',
+          'y': 'space',
+          'x': 'space'
+        }
+        multiscale_axes = [{'name': x, 'type': axes[x]} for x in axes]
+        if series == 0:
+            for axis in multiscale_axes:
+                if axis['name'] == 'x' or axis['name'] == 'y':
+                    axis['unit'] = 'micrometer'
+
+        metadata = self.get_image_metadata(0)
+        scale_level = [
+          self.size_x / metadata['Level sizes #%s' % v]['X']
+          for v in resolutions]
+
+        pixel_size_x = self.pixel_size_x if series == 0 else 1.0
+        pixel_size_y = self.pixel_size_y if series == 0 else 1.0
+
         multiscales = [{
             'metadata': {
                 'method': 'pixelengine',
                 'version': str(self.pixel_engine.version)
             },
-            'version': '0.2',
-            'datasets': [{'path': str(v)} for v in resolutions]
+            'axes': multiscale_axes,
+            'version': '0.4',
+            'datasets': [{
+                'path': str(v),
+                'coordinateTransformations': [{
+                    'scale': [
+                        1.0, 1.0, 1.0,
+                        pixel_size_y * scale_level[v],
+                        pixel_size_x * scale_level[v]],
+                    'type': 'scale'
+                }]
+            } for v in resolutions]
         }]
         z = self.zarr_group["%d" % series]
         z.attrs['multiscales'] = multiscales

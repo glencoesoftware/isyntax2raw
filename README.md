@@ -30,8 +30,8 @@ Output tile width and height can optionally be specified; default values are
 detailed in `--help`.
 
 A directory structure containing the pyramid tiles at all resolutions and
-macro/label images will be created.  The default format is Zarr.  Additional
-metadata is written to a JSON file.  Be mindful of available disk space, as
+macro/label images will be created.  The default format is Zarr compliant with https://ngff.openmicroscopy.org/0.4.
+Additional metadata is written to a JSON file.  Be mindful of available disk space, as
 larger .isyntax files can result in >20 GB of tiles.
 
 Use of the Zarr file type will result in losslessly compressed output.  This
