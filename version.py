@@ -92,7 +92,7 @@ def readReleaseVersion():
     try:
         fd = open(RELEASE_VERSION_FILE)
         try:
-            ver = fd.readline().rsplit('= ', 1)[-1].strip('\'').strip()
+            ver = fd.readline().rsplit('= ', 1)[-1].strip().strip('\'')
         finally:
             fd.close()
         if not re.search(_PEP386_VERSION_RE, ver):
