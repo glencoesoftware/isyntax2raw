@@ -322,10 +322,18 @@ class WriteTiles(object):
     def acquisition_datetime(self):
         pe_in = self.pixel_engine["in"]
         if self.sdk_v1:
-            timestamp = str(pe_in.DICOM_ACQUISITION_DATETIME)
+            timestamp = str(pe_in.DICOM_ACQUISITION_DATETIME).strip()
         else:
-            timestamp = pe_in.acquisition_datetime
-        return datetime.strptime(timestamp, "%Y%m%d%H%M%S.%f")
+            timestamp = pe_in.acquisition_datetime.strip()
+        # older files store the date time in YYYYmmddHHMMSS.ffffff format
+        # newer files use ISO 8601, i.e. YYYY-mm-ddTHH:mm:ss
+        try:
+            return datetime.strptime(timestamp, "%Y%m%d%H%M%S.%f")
+        except Exception:
+            try:
+                return datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S")
+            except Exception:
+                return datetime.min
 
     def barcode(self):
         pe_in = self.pixel_engine["in"]
