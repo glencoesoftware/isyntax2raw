@@ -86,6 +86,7 @@ setup(name='isyntax2raw',
           'zarr==2.8.1',
           'kajiki==0.8.2',
           'fsspec>=0.9.0',
+          'python-dateutil>=2.8.2'
       ],
       tests_require=[
           'flake8',
