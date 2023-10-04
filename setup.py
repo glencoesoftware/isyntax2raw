@@ -82,7 +82,7 @@ setup(name='isyntax2raw',
       install_requires=[
           'click==7.0',
           'pillow>=7.1.0',
-          'numpy==1.17.3',
+          'numpy==1.22.0',
           'zarr==2.8.1',
           'kajiki==0.8.2',
           'fsspec>=0.9.0',
