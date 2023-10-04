@@ -19,6 +19,8 @@ import softwarerendercontext
 import softwarerenderbackend
 import zarr
 
+from dateutil.parser import parse
+
 from datetime import datetime
 from concurrent.futures import ALL_COMPLETED, ThreadPoolExecutor, wait
 from threading import BoundedSemaphore
@@ -322,10 +324,18 @@ class WriteTiles(object):
     def acquisition_datetime(self):
         pe_in = self.pixel_engine["in"]
         if self.sdk_v1:
-            timestamp = str(pe_in.DICOM_ACQUISITION_DATETIME)
+            timestamp = str(pe_in.DICOM_ACQUISITION_DATETIME).strip()
         else:
-            timestamp = pe_in.acquisition_datetime
-        return datetime.strptime(timestamp, "%Y%m%d%H%M%S.%f")
+            timestamp = pe_in.acquisition_datetime.strip()
+        # older files store the date time in YYYYmmddHHMMSS.ffffff format
+        # newer files use ISO 8601, i.e. YYYY-mm-ddTHH:mm:ss
+        # other timestamp formats may be used in the future
+        try:
+            # Handle "special" isyntax date/time format
+            return datetime.strptime(timestamp, "%Y%m%d%H%M%S.%f")
+        except ValueError:
+            # Handle other date/time formats (such as ISO 8601)
+            return parse(timestamp)
 
     def barcode(self):
         pe_in = self.pixel_engine["in"]
