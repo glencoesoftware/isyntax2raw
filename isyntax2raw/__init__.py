@@ -327,12 +327,17 @@ class WriteTiles(object):
             timestamp = str(pe_in.DICOM_ACQUISITION_DATETIME).strip()
         else:
             timestamp = pe_in.acquisition_datetime.strip()
-        # older files store the date time in YYYYmmddHHMMSS.ffffff format
+        # older files store the date time in YYYYmmddHHMMSS.ffffff format,
+        # optionally with a timezone offset appended
         # newer files use ISO 8601, i.e. YYYY-mm-ddTHH:mm:ss
         # other timestamp formats may be used in the future
         try:
-            # Handle "special" isyntax date/time format
-            return datetime.strptime(timestamp, "%Y%m%d%H%M%S.%f")
+            try:
+                # Handle "special" isyntax date/time format
+                return datetime.strptime(timestamp, "%Y%m%d%H%M%S.%f")
+            except ValueError:
+                # Handle "special" isyntax date/time format with timezone
+                return datetime.strptime(timestamp, "%Y%m%d%H%M%S.%f%z")
         except ValueError:
             # Handle other date/time formats (such as ISO 8601)
             return parse(timestamp)
