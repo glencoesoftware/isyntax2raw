@@ -22,7 +22,7 @@ jobs:
           - ubuntu-20.04
         include:
           - python-version: '3.7'
-            os: macos-latest
+            os: macos-13
           - python-version: '3.7'
             os: windows-latest
     runs-on: ${{ matrix.os }}
