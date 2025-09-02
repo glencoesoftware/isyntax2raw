@@ -262,13 +262,26 @@ class WriteTiles(object):
         image_type = self.image_type(image_no)
         view = img.source_view
         image_scale_factor = view.scale
+
+        compression_method = None
+        try:
+            compression_method = img.lossy_image_compression_method
+        except RuntimeError:
+            log.warn("could not read lossy_image_compression_method")
+
+        compression_ratio = None
+        try:
+            compression_ratio = img.lossy_image_compression_ratio
+        except RuntimeError:
+            log.warn("could not read lossy_image_compression_ratio")
+
         image_metadata = {
             "Image type":
                 image_type,
             "Lossy image compression method":
-                img.lossy_image_compression_method,
+                compression_method,
             "Lossy image compression ratio":
-                img.lossy_image_compression_ratio,
+                compression_ratio,
             "Image dimension names":
                 view.dimension_names,
             "Image dimension types":
