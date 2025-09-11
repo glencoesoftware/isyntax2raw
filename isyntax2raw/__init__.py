@@ -225,8 +225,10 @@ class WriteTiles(object):
             self.pixel_size_y = img.IMAGE_SCALE_FACTOR[1]
 
             view = pe_in.SourceView()
-            image_metadata["Bits allocated"] = view.bitsAllocated()
-            image_metadata["Bits stored"] = view.bitsStored()
+            self.bits_per_pixel = view.bitsAllocated()
+            image_metadata["Bits allocated"] = self.bits_per_pixel
+            self.bits_stored = view.bitsStored()
+            image_metadata["Bits stored"] = self.bits_stored
             image_metadata["High bit"] = view.highBit()
             image_metadata["Pixel representation"] = \
                 view.pixelRepresentation()
@@ -303,8 +305,10 @@ class WriteTiles(object):
             self.pixel_size_x = image_scale_factor[0]
             self.pixel_size_y = image_scale_factor[1]
 
-            image_metadata["Bits allocated"] = view.bits_allocated
-            image_metadata["Bits stored"] = view.bits_stored
+            self.bits_per_pixel = view.bits_allocated
+            image_metadata["Bits allocated"] = self.bits_per_pixel
+            self.bits_stored = view.bits_stored
+            image_metadata["Bits stored"] = self.bits_stored
             image_metadata["High bit"] = view.high_bit
             image_metadata["Pixel representation"] = \
                 view.pixel_representation
@@ -483,6 +487,8 @@ class WriteTiles(object):
                 'pixels': {
                     'sizeX': int(self.size_x),
                     'sizeY': int(self.size_y),
+                    'type': get_pixel_type(int(self.bits_per_pixel)),
+                    'bits_stored': int(self.significant_bits),
                     'physicalSizeX': self.pixel_size_x,
                     'physicalSizeY': self.pixel_size_y
                 }
@@ -518,6 +524,22 @@ class WriteTiles(object):
             self.slide_directory, "OME", "METADATA.ome.xml"
         )
         self.write_metadata_xml(metadata_file)
+
+    def get_pixel_type(bits):
+        '''get the OME-XML pixel type string from the bits per pixel'''
+        if bits == 8:
+            return 'uint8'
+        elif bits == 16:
+            return 'uint16'
+        raise ValueError("Allocated bits not supported: %d" % bits)
+
+    def get_data_type(bits):
+        '''get numpy data type from bits per pixel'''
+        if bits == 8:
+            return numpy.uint8
+        elif bits == 16:
+            return numpy.uint16
+        raise ValueError("Allocated bits not supported: %d" % bits)
 
     def get_size(self, dim_range):
         '''calculate the length in pixels of a dimension'''
@@ -589,7 +611,8 @@ class WriteTiles(object):
         self.zarr_group.create_dataset(
             "%s/%s" % (str(series), str(resolution)),
             shape=(1, 3, 1, height, width),
-            chunks=(1, 1, 1, self.tile_height, self.tile_width), dtype='B'
+            chunks=(1, 1, 1, self.tile_height, self.tile_width),
+            dtype=get_data_type(self.bits_per_pixel)
         )
 
     def make_planar(self, pixels, tile_width, tile_height):
@@ -715,7 +738,10 @@ class WriteTiles(object):
                                 )
                             height = int(height)
                             pixel_buffer_size = width * height * 3
-                            pixels = np.empty(pixel_buffer_size, dtype='B')
+                            pixels = np.empty(
+                                pixel_buffer_size,
+                                dtype=get_data_type(self.bits_per_pixel)
+                            )
                             patch_id = patch_ids.pop(regions.index(region))
                             x_start, y_start = patch_id
                             x_start *= self.tile_width
