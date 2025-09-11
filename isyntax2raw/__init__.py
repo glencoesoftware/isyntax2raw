@@ -504,7 +504,7 @@ class WriteTiles(object):
                     'sizeX': int(self.size_x),
                     'sizeY': int(self.size_y),
                     'type': self.get_pixel_type(int(self.bits_per_pixel)),
-                    'bits_stored': int(self.significant_bits),
+                    'bits_stored': int(self.bits_stored),
                     'physicalSizeX': self.pixel_size_x,
                     'physicalSizeY': self.pixel_size_y
                 }
