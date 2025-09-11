@@ -414,6 +414,22 @@ class WriteTiles(object):
         else:
             return pe_in.num_images
 
+    def get_pixel_type(self, bits):
+        '''get the OME-XML pixel type string from the bits per pixel'''
+        if bits == 8:
+            return 'uint8'
+        elif bits == 16:
+            return 'uint16'
+        raise ValueError("Allocated bits not supported: %d" % bits)
+
+    def get_data_type(self, bits):
+        '''get numpy data type from bits per pixel'''
+        if bits == 8:
+            return np.uint8
+        elif bits == 16:
+            return np.uint16
+        raise ValueError("Allocated bits not supported: %d" % bits)
+
     def wait_any(self, regions):
         if self.sdk_v1:
             return self.pixel_engine.waitAny(regions)
@@ -487,7 +503,7 @@ class WriteTiles(object):
                 'pixels': {
                     'sizeX': int(self.size_x),
                     'sizeY': int(self.size_y),
-                    'type': get_pixel_type(int(self.bits_per_pixel)),
+                    'type': self.get_pixel_type(int(self.bits_per_pixel)),
                     'bits_stored': int(self.significant_bits),
                     'physicalSizeX': self.pixel_size_x,
                     'physicalSizeY': self.pixel_size_y
@@ -524,22 +540,6 @@ class WriteTiles(object):
             self.slide_directory, "OME", "METADATA.ome.xml"
         )
         self.write_metadata_xml(metadata_file)
-
-    def get_pixel_type(bits):
-        '''get the OME-XML pixel type string from the bits per pixel'''
-        if bits == 8:
-            return 'uint8'
-        elif bits == 16:
-            return 'uint16'
-        raise ValueError("Allocated bits not supported: %d" % bits)
-
-    def get_data_type(bits):
-        '''get numpy data type from bits per pixel'''
-        if bits == 8:
-            return numpy.uint8
-        elif bits == 16:
-            return numpy.uint16
-        raise ValueError("Allocated bits not supported: %d" % bits)
 
     def get_size(self, dim_range):
         '''calculate the length in pixels of a dimension'''
@@ -612,7 +612,7 @@ class WriteTiles(object):
             "%s/%s" % (str(series), str(resolution)),
             shape=(1, 3, 1, height, width),
             chunks=(1, 1, 1, self.tile_height, self.tile_width),
-            dtype=get_data_type(self.bits_per_pixel)
+            dtype=self.get_data_type(self.bits_per_pixel)
         )
 
     def make_planar(self, pixels, tile_width, tile_height):
@@ -740,7 +740,7 @@ class WriteTiles(object):
                             pixel_buffer_size = width * height * 3
                             pixels = np.empty(
                                 pixel_buffer_size,
-                                dtype=get_data_type(self.bits_per_pixel)
+                                dtype=self.get_data_type(self.bits_per_pixel)
                             )
                             patch_id = patch_ids.pop(regions.index(region))
                             x_start, y_start = patch_id
