@@ -616,6 +616,9 @@ class WriteTiles(object):
         )
 
     def make_planar(self, pixels, tile_width, tile_height):
+        if self.bits_per_pixel is not None:
+            pixels.dtype = self.get_data_type(self.bits_per_pixel)
+
         r = pixels[0::3]
         g = pixels[1::3]
         b = pixels[2::3]
@@ -742,7 +745,7 @@ class WriteTiles(object):
                                 pixel_buffer_size = pixel_buffer_size * (self.bits_per_pixel / 8)
 
                             pixels = np.empty(
-                                pixel_buffer_size,
+                                int(pixel_buffer_size),
                                 dtype='B'
                             )
                             patch_id = patch_ids.pop(regions.index(region))
