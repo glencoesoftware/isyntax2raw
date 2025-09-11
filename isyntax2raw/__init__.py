@@ -738,9 +738,12 @@ class WriteTiles(object):
                                 )
                             height = int(height)
                             pixel_buffer_size = width * height * 3
+                            if self.bits_per_pixel is not None:
+                                pixel_buffer_size = pixel_buffer_size * (self.bits_per_pixel / 8)
+
                             pixels = np.empty(
                                 pixel_buffer_size,
-                                dtype=self.get_data_type(self.bits_per_pixel)
+                                dtype='B'
                             )
                             patch_id = patch_ids.pop(regions.index(region))
                             x_start, y_start = patch_id
