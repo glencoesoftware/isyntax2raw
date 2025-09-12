@@ -742,7 +742,8 @@ class WriteTiles(object):
                             height = int(height)
                             pixel_buffer_size = width * height * 3
                             if self.bits_per_pixel is not None:
-                                pixel_buffer_size = pixel_buffer_size * (self.bits_per_pixel / 8)
+                                bpp = self.bits_per_pixel / 8
+                                pixel_buffer_size = pixel_buffer_size * bpp
 
                             pixels = np.empty(
                                 int(pixel_buffer_size),
