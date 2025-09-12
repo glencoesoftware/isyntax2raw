@@ -582,17 +582,27 @@ class WriteTiles(object):
             img = Image.open(BytesIO(pixels))
 
             # dimensions may be different
-            # use the metadata dimensions, but warn on mismatch
+            # if image is smaller, use the metadata dimensions and warn
             # the label image in particular may encounter this case,
             # with the actual stored image being much smaller than
             # all metadata indicates (possibly due to deidentification)
-            if img.width != img_x:
+            #
+            # if the image is larger, error, as this is unexpected
+            if img.width < img_x:
                 log.warn("width %d does not match metadata %d" %
                          (img.width, img_x))
 
-            if img.height != img_y:
+            if img.height < img_y:
                 log.warn("height %d does not match metadata %d" %
                          (img.height, img_y))
+
+            if img.width > img_x:
+                raise ValueError("width %d does not match metadata %d" %
+                                 (img.width, img_x))
+
+            if img.height > img_y:
+                raise ValueError("height %d does not match metadata %d" %
+                                 (img.height, img_y))
 
             self.create_tile_directory(series, 0, img_x, img_y)
             tile = self.zarr_group["%d/0" % series]
@@ -600,6 +610,13 @@ class WriteTiles(object):
             for channel in range(0, 3):
                 band = np.array(img.getdata(band=channel))
                 band.shape = (img.height, img.width)
+
+                # if the image is smaller than metadata dimensions,
+                # pad to the correct size
+                height_diff = img_y - img.height
+                width_diff = img_x - img.width
+                band = np.pad(band, [(0, height_diff), (0, width_diff)])
+
                 tile[0, channel, 0] = band
             self.write_image_metadata(range(1), series)
 
