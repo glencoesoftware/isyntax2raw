@@ -263,6 +263,9 @@ class WriteTiles(object):
 
     def get_view(self, img):
         view = img.source_view
+        if img.image_type != "WSI":
+            return view
+
         user_view = view.add_user_view()
         user_view.add_filter(FILTER_16_TO_8)
         return user_view
