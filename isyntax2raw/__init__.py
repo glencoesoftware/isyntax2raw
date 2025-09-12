@@ -613,8 +613,8 @@ class WriteTiles(object):
 
                 # if the image is smaller than metadata dimensions,
                 # pad to the correct size
-                height_diff = img_y - img.height
-                width_diff = img_x - img.width
+                height_diff = int(img_y - img.height)
+                width_diff = int(img_x - img.width)
                 band = np.pad(band, [(0, height_diff), (0, width_diff)])
 
                 tile[0, channel, 0] = band
