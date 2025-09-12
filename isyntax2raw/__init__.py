@@ -556,11 +556,13 @@ class WriteTiles(object):
 
     def write_label_image(self):
         '''write the label image (if present) as a JPEG file'''
-        self.write_image_type("LABELIMAGE", 1)
+        self.write_image_type("LABELIMAGE", 1,
+                              self.label_x, self.label_y)
 
     def write_macro_image(self):
         '''write the macro image (if present) as a JPEG file'''
-        self.write_image_type("MACROIMAGE", 2)
+        self.write_image_type("MACROIMAGE", 2,
+                              self.macro_x, self.macro_y)
 
     def find_image_type(self, image_type):
         '''look up a given image type in the pixel engine'''
@@ -570,7 +572,7 @@ class WriteTiles(object):
                 return pe_in[index]
         return None
 
-    def write_image_type(self, image_type, series):
+    def write_image_type(self, image_type, series, img_x, img_y):
         '''write an image of the specified type'''
         image = self.find_image_type(image_type)
         if image is not None:
@@ -578,15 +580,26 @@ class WriteTiles(object):
 
             # pixels are JPEG compressed, need to decompress first
             img = Image.open(BytesIO(pixels))
-            width = img.width
-            height = img.height
 
-            self.create_tile_directory(series, 0, width, height)
+            # dimensions may be different
+            # use the metadata dimensions, but warn on mismatch
+            # the label image in particular may encounter this case,
+            # with the actual stored image being much smaller than
+            # all metadata indicates (possibly due to deidentification)
+            if img.width != img_x:
+                log.warn("width %d does not match metadata %d" %
+                         (img.width, img_x))
+
+            if img.height != img_y:
+                log.warn("height %d does not match metadata %d" %
+                         (img.height, img_y))
+
+            self.create_tile_directory(series, 0, img_x, img_y)
             tile = self.zarr_group["%d/0" % series]
             tile.attrs['image type'] = image_type
             for channel in range(0, 3):
                 band = np.array(img.getdata(band=channel))
-                band.shape = (height, width)
+                band.shape = (img.height, img.width)
                 tile[0, channel, 0] = band
             self.write_image_metadata(range(1), series)
 
