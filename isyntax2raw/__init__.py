@@ -35,6 +35,9 @@ log = logging.getLogger(__name__)
 # version of the Zarr layout
 LAYOUT_VERSION = 3
 
+# name of filter to convert 16 bit to 8 bit
+FILTER_16_TO_8 = "Linear16ToSRGB8"
+
 
 class MaxQueuePool(object):
     """This Class wraps a concurrent.futures.Executor
@@ -258,11 +261,17 @@ class WriteTiles(object):
             self.macro_y = self.get_size(img.IMAGE_DIMENSION_RANGES[1]) + 1
         return image_metadata
 
+    def get_view(self, img):
+        view = img.source_view
+        user_view = view.add_user_view()
+        user_view.add_filter(FILTER_16_TO_8)
+        return user_view
+
     def get_image_metadata_sdk_v2(self, image_no):
         pe_in = self.pixel_engine["in"]
         img = pe_in[image_no]
         image_type = self.image_type(image_no)
-        view = img.source_view
+        view = self.get_view(img)
         image_scale_factor = view.scale
 
         compression_method = None
@@ -371,7 +380,7 @@ class WriteTiles(object):
         if self.sdk_v1:
             return pe_in.SourceView().dataEnvelopes(resolution)
         else:
-            return image.source_view.data_envelopes(resolution)
+            return self.get_view(image).data_envelopes(resolution)
 
     def derivation_description(self):
         pe_in = self.pixel_engine["in"]
@@ -385,7 +394,7 @@ class WriteTiles(object):
         if self.sdk_v1:
             return pe_in.SourceView().dimensionRanges(resolution)
         else:
-            return image.source_view.dimension_ranges(resolution)
+            return self.get_view(image).dimension_ranges(resolution)
 
     def image_data(self, image):
         if self.sdk_v1:
@@ -405,7 +414,7 @@ class WriteTiles(object):
         if self.sdk_v1:
             return pe_in.numLevels()
         else:
-            return image.source_view.num_derived_levels
+            return self.get_view(image).num_derived_levels
 
     def num_images(self):
         pe_in = self.pixel_engine["in"]
@@ -730,7 +739,8 @@ class WriteTiles(object):
                     if self.sdk_v1:
                         request_regions = pe_in.SourceView().requestRegions
                     else:
-                        request_regions = image.source_view.request_regions
+                        request_regions = self.get_view(image).request_regions
+
                     regions = request_regions(
                         patches[i:i + self.batch_size], envelopes, True,
                         [self.fill_color] * 3
