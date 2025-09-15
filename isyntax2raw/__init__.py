@@ -86,7 +86,7 @@ class WriteTiles(object):
 
     def __init__(
         self, tile_width, tile_height, resolutions, max_workers,
-        batch_size, fill_color, nested, input_path, output_path
+        batch_size, fill_color, nested, linear16to8, input_path, output_path
     ):
         self.tile_width = tile_width
         self.tile_height = tile_height
@@ -95,6 +95,7 @@ class WriteTiles(object):
         self.batch_size = batch_size
         self.fill_color = fill_color
         self.nested = nested
+        self.linear16to8 = linear16to8
         self.input_path = input_path
         self.slide_directory = output_path
 
@@ -264,7 +265,7 @@ class WriteTiles(object):
 
     def get_view(self, img):
         view = img.source_view
-        if img.image_type != "WSI":
+        if img.image_type != "WSI" or self.linear16to8 is False:
             return view
 
         if self.user_view is None:

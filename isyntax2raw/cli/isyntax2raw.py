@@ -61,6 +61,10 @@ def cli():
     help="Whether to use '/' as the chunk path separator"
 )
 @click.option(
+    "--linear16to8", default=False, show_default=True,
+    help="apply built-in linear 16 to 8 bit filter"
+)
+@click.option(
     "--debug", is_flag=True,
     help="enable debugging",
 )
@@ -68,12 +72,13 @@ def cli():
 @click.argument("output_path")
 def write_tiles(
     tile_width, tile_height, resolutions, max_workers, batch_size,
-    fill_color, nested, debug, input_path, output_path
+    fill_color, nested, linear16to8, debug, input_path, output_path
 ):
     setup_logging(debug)
     with WriteTiles(
         tile_width, tile_height, resolutions, max_workers,
-        batch_size, fill_color, nested, input_path, output_path
+        batch_size, fill_color, nested, linear16to8,
+        input_path, output_path
     ) as wt:
         wt.write_metadata()
         wt.write_label_image()
