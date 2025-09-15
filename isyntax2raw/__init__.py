@@ -729,10 +729,10 @@ class WriteTiles(object):
                 [self.tile_width, self.tile_height],
                 tile_directory
             )
-            envelopes = self.data_envelopes(image, resolution)
             jobs = []
             with MaxQueuePool(ThreadPoolExecutor, self.max_workers) as pool:
                 for i in range(0, len(patches), self.batch_size):
+                    envelopes = self.data_envelopes(image, resolution)
                     # requestRegions(
                     #    self: pixelengine.PixelEngine.View,
                     #    region: List[List[int]],
