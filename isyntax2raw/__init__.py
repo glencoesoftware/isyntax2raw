@@ -106,6 +106,7 @@ class WriteTiles(object):
         )
         self.pixel_engine["in"].open(input_path, "ficom")
         self.sdk_v1 = hasattr(self.pixel_engine["in"], "BARCODE")
+        self.user_view = None
 
     def __enter__(self):
         return self
@@ -266,9 +267,11 @@ class WriteTiles(object):
         if img.image_type != "WSI":
             return view
 
-        user_view = view.add_user_view()
-        user_view.add_filter(FILTER_16_TO_8)
-        return user_view
+        if self.user_view is None:
+            self.user_view = view.add_user_view()
+            self.user_view.add_filter(FILTER_16_TO_8)
+
+        return self.user_view
 
     def get_image_metadata_sdk_v2(self, image_no):
         pe_in = self.pixel_engine["in"]
