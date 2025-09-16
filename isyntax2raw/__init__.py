@@ -281,6 +281,9 @@ class WriteTiles(object):
         view = self.get_view(img)
         image_scale_factor = view.scale
 
+        # compression method and ratio are informational only
+        # these values are not needed for decompression
+        # and may be missing for label/macro images in particular
         compression_method = None
         try:
             compression_method = img.lossy_image_compression_method
@@ -296,10 +299,6 @@ class WriteTiles(object):
         image_metadata = {
             "Image type":
                 image_type,
-            "Lossy image compression method":
-                compression_method,
-            "Lossy image compression ratio":
-                compression_ratio,
             "Image dimension names":
                 view.dimension_names,
             "Image dimension types":
@@ -313,6 +312,13 @@ class WriteTiles(object):
             "Block size":
                 img.block_size(),
         }
+        if compression_method is not None:
+            image_metadata[
+              "Lossy image compression method"] = compression_method
+
+        if compression_ratio is not None:
+            image_metadata["Lossy image compression ratio"] = compression_ratio
+
         if image_type == "WSI":
             image_metadata["Color space transform"] = \
                 img.colorspace_transform
