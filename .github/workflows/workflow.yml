@@ -34,18 +34,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: python -mpip install -U wheel flake8 virtualenv
+        run: python -mpip install -U flake8 virtualenv
       - name: Run tests
         run: |
             flake8
             python setup.py build
 
-  # https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
-  publish-pypi:
-    name: Pypi
-    if: startsWith(github.ref, 'refs/tags')
+  build:
     needs:
-      # Only publish if other jobs passed
       - test
     runs-on: ubuntu-latest
     steps:
@@ -54,11 +50,25 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.ref }}
       - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: python -mpip install -U wheel
       - name: Build package
-        run: |
-          python -mpip install wheel
-          python setup.py sdist bdist_wheel
+        run: python setup.py sdist bdist_wheel
+      - name: Artifact upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: isyntax2raw
+          path: dist/*.whl
+          retention-days: 30
+      - name: Create a GitHubrelease
+        if: startsWith(github.ref, 'refs/tags')
+        run: gh release create --generate-notes "${GITHUB_REF#refs/tags/}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish to PyPI
+        if: startsWith(github.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
