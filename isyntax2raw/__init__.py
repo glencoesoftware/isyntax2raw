@@ -35,6 +35,9 @@ log = logging.getLogger(__name__)
 # version of the Zarr layout
 LAYOUT_VERSION = 3
 
+# name of filter to convert 16 bit to 8 bit
+FILTER_16_TO_8 = "Linear16ToSRGB8"
+
 
 class MaxQueuePool(object):
     """This Class wraps a concurrent.futures.Executor
@@ -83,7 +86,7 @@ class WriteTiles(object):
 
     def __init__(
         self, tile_width, tile_height, resolutions, max_workers,
-        batch_size, fill_color, nested, input_path, output_path
+        batch_size, fill_color, nested, linear16to8, input_path, output_path
     ):
         self.tile_width = tile_width
         self.tile_height = tile_height
@@ -92,6 +95,7 @@ class WriteTiles(object):
         self.batch_size = batch_size
         self.fill_color = fill_color
         self.nested = nested
+        self.linear16to8 = linear16to8
         self.input_path = input_path
         self.slide_directory = output_path
 
@@ -103,6 +107,7 @@ class WriteTiles(object):
         )
         self.pixel_engine["in"].open(input_path, "ficom")
         self.sdk_v1 = hasattr(self.pixel_engine["in"], "BARCODE")
+        self.user_view = None
 
     def __enter__(self):
         return self
@@ -225,8 +230,10 @@ class WriteTiles(object):
             self.pixel_size_y = img.IMAGE_SCALE_FACTOR[1]
 
             view = pe_in.SourceView()
-            image_metadata["Bits allocated"] = view.bitsAllocated()
-            image_metadata["Bits stored"] = view.bitsStored()
+            self.bits_per_pixel = view.bitsAllocated()
+            image_metadata["Bits allocated"] = self.bits_per_pixel
+            self.bits_stored = view.bitsStored()
+            image_metadata["Bits stored"] = self.bits_stored
             image_metadata["High bit"] = view.highBit()
             image_metadata["Pixel representation"] = \
                 view.pixelRepresentation()
@@ -256,19 +263,42 @@ class WriteTiles(object):
             self.macro_y = self.get_size(img.IMAGE_DIMENSION_RANGES[1]) + 1
         return image_metadata
 
+    def get_view(self, img):
+        view = img.source_view
+        if img.image_type != "WSI" or self.linear16to8 is False:
+            return view
+
+        if self.user_view is None:
+            self.user_view = view.add_user_view()
+            self.user_view.add_filter(FILTER_16_TO_8)
+
+        return self.user_view
+
     def get_image_metadata_sdk_v2(self, image_no):
         pe_in = self.pixel_engine["in"]
         img = pe_in[image_no]
         image_type = self.image_type(image_no)
-        view = img.source_view
+        view = self.get_view(img)
         image_scale_factor = view.scale
+
+        # compression method and ratio are informational only
+        # these values are not needed for decompression
+        # and may be missing for label/macro images in particular
+        compression_method = None
+        try:
+            compression_method = img.lossy_image_compression_method
+        except RuntimeError:
+            log.warn("could not read lossy_image_compression_method")
+
+        compression_ratio = None
+        try:
+            compression_ratio = img.lossy_image_compression_ratio
+        except RuntimeError:
+            log.warn("could not read lossy_image_compression_ratio")
+
         image_metadata = {
             "Image type":
                 image_type,
-            "Lossy image compression method":
-                img.lossy_image_compression_method,
-            "Lossy image compression ratio":
-                img.lossy_image_compression_ratio,
             "Image dimension names":
                 view.dimension_names,
             "Image dimension types":
@@ -282,6 +312,13 @@ class WriteTiles(object):
             "Block size":
                 img.block_size(),
         }
+        if compression_method is not None:
+            image_metadata[
+              "Lossy image compression method"] = compression_method
+
+        if compression_ratio is not None:
+            image_metadata["Lossy image compression ratio"] = compression_ratio
+
         if image_type == "WSI":
             image_metadata["Color space transform"] = \
                 img.colorspace_transform
@@ -290,8 +327,10 @@ class WriteTiles(object):
             self.pixel_size_x = image_scale_factor[0]
             self.pixel_size_y = image_scale_factor[1]
 
-            image_metadata["Bits allocated"] = view.bits_allocated
-            image_metadata["Bits stored"] = view.bits_stored
+            self.bits_per_pixel = view.bits_allocated
+            image_metadata["Bits allocated"] = self.bits_per_pixel
+            self.bits_stored = view.bits_stored
+            image_metadata["Bits stored"] = self.bits_stored
             image_metadata["High bit"] = view.high_bit
             image_metadata["Pixel representation"] = \
                 view.pixel_representation
@@ -327,12 +366,17 @@ class WriteTiles(object):
             timestamp = str(pe_in.DICOM_ACQUISITION_DATETIME).strip()
         else:
             timestamp = pe_in.acquisition_datetime.strip()
-        # older files store the date time in YYYYmmddHHMMSS.ffffff format
+        # older files store the date time in YYYYmmddHHMMSS.ffffff format,
+        # optionally with a timezone offset appended
         # newer files use ISO 8601, i.e. YYYY-mm-ddTHH:mm:ss
         # other timestamp formats may be used in the future
         try:
-            # Handle "special" isyntax date/time format
-            return datetime.strptime(timestamp, "%Y%m%d%H%M%S.%f")
+            try:
+                # Handle "special" isyntax date/time format
+                return datetime.strptime(timestamp, "%Y%m%d%H%M%S.%f")
+            except ValueError:
+                # Handle "special" isyntax date/time format with timezone
+                return datetime.strptime(timestamp, "%Y%m%d%H%M%S.%f%z")
         except ValueError:
             # Handle other date/time formats (such as ISO 8601)
             return parse(timestamp)
@@ -349,7 +393,7 @@ class WriteTiles(object):
         if self.sdk_v1:
             return pe_in.SourceView().dataEnvelopes(resolution)
         else:
-            return image.source_view.data_envelopes(resolution)
+            return self.get_view(image).data_envelopes(resolution)
 
     def derivation_description(self):
         pe_in = self.pixel_engine["in"]
@@ -363,7 +407,7 @@ class WriteTiles(object):
         if self.sdk_v1:
             return pe_in.SourceView().dimensionRanges(resolution)
         else:
-            return image.source_view.dimension_ranges(resolution)
+            return self.get_view(image).dimension_ranges(resolution)
 
     def image_data(self, image):
         if self.sdk_v1:
@@ -383,7 +427,7 @@ class WriteTiles(object):
         if self.sdk_v1:
             return pe_in.numLevels()
         else:
-            return image.source_view.num_derived_levels
+            return self.get_view(image).num_derived_levels
 
     def num_images(self):
         pe_in = self.pixel_engine["in"]
@@ -391,6 +435,22 @@ class WriteTiles(object):
             return pe_in.numImages()
         else:
             return pe_in.num_images
+
+    def get_pixel_type(self, bits):
+        '''get the OME-XML pixel type string from the bits per pixel'''
+        if bits == 8:
+            return 'uint8'
+        elif bits == 16:
+            return 'uint16'
+        raise ValueError("Allocated bits not supported: %d" % bits)
+
+    def get_data_type(self, bits):
+        '''get numpy data type from bits per pixel'''
+        if bits == 8:
+            return np.uint8
+        elif bits == 16:
+            return np.uint16
+        raise ValueError("Allocated bits not supported: %d" % bits)
 
     def wait_any(self, regions):
         if self.sdk_v1:
@@ -465,6 +525,8 @@ class WriteTiles(object):
                 'pixels': {
                     'sizeX': int(self.size_x),
                     'sizeY': int(self.size_y),
+                    'type': self.get_pixel_type(int(self.bits_per_pixel)),
+                    'bits_stored': int(self.bits_stored),
                     'physicalSizeX': self.pixel_size_x,
                     'physicalSizeY': self.pixel_size_y
                 }
@@ -516,11 +578,13 @@ class WriteTiles(object):
 
     def write_label_image(self):
         '''write the label image (if present) as a JPEG file'''
-        self.write_image_type("LABELIMAGE", 1)
+        self.write_image_type("LABELIMAGE", 1,
+                              self.label_x, self.label_y)
 
     def write_macro_image(self):
         '''write the macro image (if present) as a JPEG file'''
-        self.write_image_type("MACROIMAGE", 2)
+        self.write_image_type("MACROIMAGE", 2,
+                              self.macro_x, self.macro_y)
 
     def find_image_type(self, image_type):
         '''look up a given image type in the pixel engine'''
@@ -530,7 +594,7 @@ class WriteTiles(object):
                 return pe_in[index]
         return None
 
-    def write_image_type(self, image_type, series):
+    def write_image_type(self, image_type, series, img_x, img_y):
         '''write an image of the specified type'''
         image = self.find_image_type(image_type)
         if image is not None:
@@ -538,15 +602,43 @@ class WriteTiles(object):
 
             # pixels are JPEG compressed, need to decompress first
             img = Image.open(BytesIO(pixels))
-            width = img.width
-            height = img.height
 
-            self.create_tile_directory(series, 0, width, height)
+            # dimensions may be different
+            # if image is smaller, use the metadata dimensions and warn
+            # the label image in particular may encounter this case,
+            # with the actual stored image being much smaller than
+            # all metadata indicates (possibly due to deidentification)
+            #
+            # if the image is larger, error, as this is unexpected
+            if img.width < img_x:
+                log.warn("width %d does not match metadata %d" %
+                         (img.width, img_x))
+
+            if img.height < img_y:
+                log.warn("height %d does not match metadata %d" %
+                         (img.height, img_y))
+
+            if img.width > img_x:
+                raise ValueError("width %d does not match metadata %d" %
+                                 (img.width, img_x))
+
+            if img.height > img_y:
+                raise ValueError("height %d does not match metadata %d" %
+                                 (img.height, img_y))
+
+            self.create_tile_directory(series, 0, img_x, img_y)
             tile = self.zarr_group["%d/0" % series]
             tile.attrs['image type'] = image_type
             for channel in range(0, 3):
                 band = np.array(img.getdata(band=channel))
-                band.shape = (height, width)
+                band.shape = (img.height, img.width)
+
+                # if the image is smaller than metadata dimensions,
+                # pad to the correct size
+                height_diff = int(img_y - img.height)
+                width_diff = int(img_x - img.width)
+                band = np.pad(band, [(0, height_diff), (0, width_diff)])
+
                 tile[0, channel, 0] = band
             self.write_image_metadata(range(1), series)
 
@@ -571,10 +663,13 @@ class WriteTiles(object):
         self.zarr_group.create_dataset(
             "%s/%s" % (str(series), str(resolution)),
             shape=(1, 3, 1, height, width),
-            chunks=(1, 1, 1, self.tile_height, self.tile_width), dtype='B'
+            chunks=(1, 1, 1, self.tile_height, self.tile_width),
+            dtype=self.get_data_type(self.bits_per_pixel)
         )
 
     def make_planar(self, pixels, tile_width, tile_height):
+        pixels.dtype = self.get_data_type(self.bits_per_pixel)
+
         r = pixels[0::3]
         g = pixels[1::3]
         b = pixels[2::3]
@@ -640,10 +735,10 @@ class WriteTiles(object):
                 [self.tile_width, self.tile_height],
                 tile_directory
             )
-            envelopes = self.data_envelopes(image, resolution)
             jobs = []
             with MaxQueuePool(ThreadPoolExecutor, self.max_workers) as pool:
                 for i in range(0, len(patches), self.batch_size):
+                    envelopes = self.data_envelopes(image, resolution)
                     # requestRegions(
                     #    self: pixelengine.PixelEngine.View,
                     #    region: List[List[int]],
@@ -656,7 +751,8 @@ class WriteTiles(object):
                     if self.sdk_v1:
                         request_regions = pe_in.SourceView().requestRegions
                     else:
-                        request_regions = image.source_view.request_regions
+                        request_regions = self.get_view(image).request_regions
+
                     regions = request_regions(
                         patches[i:i + self.batch_size], envelopes, True,
                         [self.fill_color] * 3
@@ -697,7 +793,13 @@ class WriteTiles(object):
                                 )
                             height = int(height)
                             pixel_buffer_size = width * height * 3
-                            pixels = np.empty(pixel_buffer_size, dtype='B')
+                            bpp = self.bits_per_pixel / 8
+                            pixel_buffer_size = pixel_buffer_size * bpp
+
+                            pixels = np.empty(
+                                int(pixel_buffer_size),
+                                dtype='B'
+                            )
                             patch_id = patch_ids.pop(regions.index(region))
                             x_start, y_start = patch_id
                             x_start *= self.tile_width
