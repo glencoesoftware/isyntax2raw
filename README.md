@@ -1,5 +1,3 @@
-[![AppVeyor status](https://ci.appveyor.com/api/projects/status/github/isyntax2raw)](https://ci.appveyor.com/project/gs-jenkins/isyntax2raw)
-
 # iSyntax Converter
 
 Python tool that uses Philips' SDK to write slides in an intermediary raw format.
