@@ -36,6 +36,18 @@ Use of the Zarr file type will result in losslessly compressed output.  This
 is the only format currently supported by the downstream `raw2ometiff` (as of
 version 0.3.0).
 
+## Supported data types
+
+Brightfield RGB with 8 bits per component is supported in all versions.
+
+Brightfield RGB with 16 bits per component is supported in 0.7.0 and later.
+By default, all 16 bits per component are converted. If 8 bit output is required
+instead, the `--linear16to8` option can be used to convert to 8 bit before
+writing to Zarr. This is performed using the `Linear16ToSRGB8` filter built in
+to the Philips SDK.
+
+Any other data types are not currently supported.
+
 ## Background color
 
 Any missing tiles are filled with 0 by default, which displays as black.
@@ -67,8 +79,3 @@ relative performance.
 
 The iSyntax converter is distributed under the terms of the BSD license.
 Please see `LICENSE.txt` for further details.
-
-## Areas to improve
-
-* Currently assumes brightfield (RGB, 8 bits per channel) without really
-  checking the metadata.  Probably should check bit depths etc.
