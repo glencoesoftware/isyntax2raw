@@ -42,8 +42,12 @@ Brightfield RGB with 8 bits per component is supported in all versions.
 
 Brightfield RGB with 16 bits per component is supported in 0.7.0 and later.
 By default, all 16 bits per component are converted. If 8 bit output is required
-instead, the `--linear16to8` option can be used to convert to 8 bit before
-writing to Zarr. This is performed using the `Linear16ToSRGB8` filter built in
+instead, the `--linear16to8=true` option can be used to convert to 8 bit before
+writing to Zarr, for example:
+
+    isyntax2raw write_tiles /path/to/input.isyntax /path/to/directory.zarr --linear16to8=true
+
+Conversion from 16 to 8 bits is performed using the `Linear16ToSRGB8` filter built in
 to the Philips SDK.
 
 Any other data types are not currently supported.
